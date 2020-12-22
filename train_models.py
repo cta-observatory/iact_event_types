@@ -18,7 +18,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    dl2_file_name = '../DL2/gamma_onSource.S.3HB9-FD_ID0.eff-0.root'
+    # dl2_file_name = '/lustre/fs21/group/cta/users/maierg/analysis/AnalysisData/uploadDL2/Paranal_20deg/gamma_cone.S.3HB9-FD_ID0.eff-0.root'
+    dl2_file_name = '/lustre/fs21/group/cta/users/maierg/analysis/AnalysisData/uploadDL2/Paranal_20deg/gamma_onSource.S.3HB9-FD_ID0.eff-0.root'
     dtf = event_classes.extract_df_from_dl2(dl2_file_name)
     dtf_e = event_classes.bin_data_in_energy(dtf)
 
@@ -38,7 +39,13 @@ if __name__ == '__main__':
     ]
 
     all_models = event_classes.define_regressors()
-    models_to_train = {'linear_regression': all_models['linear_regression']}
+    models_to_train = {
+        'linear_regression': all_models['linear_regression'],
+        'random_forest': all_models['random_forest'],
+        'MLP': all_models['MLP'],
+        'MLP_relu': all_models['MLP_relu'],
+        'MLP_logistic': all_models['MLP_logistic']
+    }
     trained_models = event_classes.train_models(
         dtf_e_train,
         train_features,
@@ -46,7 +53,7 @@ if __name__ == '__main__':
         models_to_train
     )
     event_classes.save_models(trained_models)
-    # event_classes.save_test_dtf(dtf_e_test)
+    event_classes.save_test_dtf(dtf_e_test)
 
     for this_trained_model_name, this_trained_model in trained_models.items():
         plt = event_classes.plot_test_vs_predict(

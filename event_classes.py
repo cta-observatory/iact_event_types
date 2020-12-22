@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import copy
 from collections import defaultdict
 from astropy.coordinates.angle_utilities import angular_separation
+from astropy.coordinates import Angle
 from astropy import units as u
 from astropy.table import Table
 import pandas as pd
@@ -40,48 +41,70 @@ def extract_df_from_dl2(root_filename):
     A pandas DataFrame with variables to use in the regression, after cuts.
     '''
 
+    branches = [
+        'MCze',
+        'MCaz',
+        'Ze',
+        'Az',
+        'size',
+        'ErecS',
+        'NImages',
+        'Xcore',
+        'Ycore',
+        'Xoff',
+        'Yoff',
+        'img2_ang',
+        'EChi2S',
+        'SizeSecondMax',
+        'NTelPairs',
+        'MSCW',
+        'MSCL'
+    ]
+
     particle_file = uproot.open(root_filename)
     data = particle_file['data']
     cuts = particle_file['fEventTreeCuts']
 
+    data_arrays = data.arrays(expressions=branches, library='np')
+    cuts_arrays = cuts.arrays(expressions='CutClass', library='np')
+
     # Cut 1: Events surviving gamma/hadron separation and direction cuts:
-    mask_gamma_like_and_direction = cuts.array('CutClass') == 5
+    mask_gamma_like_and_direction = cuts_arrays['CutClass'] == 5
 
     # Cut 2: Events surviving gamma/hadron separation cut and not direction cut:
-    mask_gamma_like_no_direction = cuts.array('CutClass') == 0
+    mask_gamma_like_no_direction = cuts_arrays['CutClass'] == 0
 
     gamma_like_events = np.logical_or(mask_gamma_like_and_direction, mask_gamma_like_no_direction)
-    mc_energy = data.array('MCe0')[gamma_like_events]
 
     # Variables for regression:
-    mc_alt = 90 - data.array('MCze')[gamma_like_events]
-    mc_az = data.array('MCaz')[gamma_like_events]
-    reco_alt = 90 - data.array('Ze')[gamma_like_events]
-    reco_az = data.array('Az')[gamma_like_events]
+    mc_alt = (90 - data_arrays['MCze'][gamma_like_events]) * u.deg
+    mc_az = (data_arrays['MCaz'][gamma_like_events]) * u.deg
+    reco_alt = (90 - data_arrays['Ze'][gamma_like_events]) * u.deg
+    reco_az = (data_arrays['Az'][gamma_like_events]) * u.deg
     # Angular separation bewteen the true vs reconstructed direction
     ang_diff = angular_separation(
-        mc_az * u.deg,  # az
-        mc_alt * u.deg,  # alt
-        reco_az * u.deg,
-        reco_alt * u.deg,
+        mc_az,  # az
+        mc_alt,  # alt
+        reco_az,
+        reco_alt,
     )
 
     # Variables for training:
-    av_size = [np.average(sizes) for sizes in data.array('size')[gamma_like_events]]
-    reco_energy = data.array('ErecS')[gamma_like_events]
-    NTels_reco = data.array('NImages')[gamma_like_events]
-    x_cores = data.array('Xcore')[gamma_like_events]
-    y_cores = data.array('Ycore')[gamma_like_events]
+    av_size = [np.average(sizes) for sizes in data_arrays['size'][gamma_like_events]]
+    reco_energy = data_arrays['ErecS'][gamma_like_events]
+    NTels_reco = data_arrays['NImages'][gamma_like_events]
+    x_cores = data_arrays['Xcore'][gamma_like_events]
+    y_cores = data_arrays['Ycore'][gamma_like_events]
     array_distance = np.sqrt(x_cores**2. + y_cores**2.)
-    x_off = data.array('Xoff')[gamma_like_events]
-    y_off = data.array('Yoff')[gamma_like_events]
+    x_off = data_arrays['Xoff'][gamma_like_events]
+    y_off = data_arrays['Yoff'][gamma_like_events]
     camera_offset = np.sqrt(x_off**2. + y_off**2.)
-    img2_ang = data.array('img2_ang')[gamma_like_events]
-    EChi2S = data.array('EChi2S')[gamma_like_events]
-    SizeSecondMax = data.array('SizeSecondMax')[gamma_like_events]
-    NTelPairs = data.array('NTelPairs')[gamma_like_events]
-    MSCW = data.array('MSCW')[gamma_like_events]
-    MSCL = data.array('MSCL')[gamma_like_events]
+    img2_ang = data_arrays['img2_ang'][gamma_like_events]
+    EChi2S = data_arrays['EChi2S'][gamma_like_events]
+    SizeSecondMax = data_arrays['SizeSecondMax'][gamma_like_events]
+    NTelPairs = data_arrays['NTelPairs'][gamma_like_events]
+    MSCW = data_arrays['MSCW'][gamma_like_events]
+    MSCL = data_arrays['MSCL'][gamma_like_events]
 
     # Build astropy table:
     t = Table()
@@ -197,21 +220,43 @@ def define_regressors():
 
     regressors = dict()
 
-    regressors['random_forest'] = RandomForestRegressor(n_estimators=200, random_state=0, n_jobs=4)
+    regressors['random_forest'] = RandomForestRegressor(n_estimators=1000, random_state=0, n_jobs=8)
     regressors['MLP'] = make_pipeline(
         preprocessing.QuantileTransformer(output_distribution='normal', random_state=0),
         MLPRegressor(
-            hidden_layer_sizes=(36, 6),
+            hidden_layer_sizes=(80, 45),
             solver='adam',
-            max_iter=2000,
+            max_iter=20000,
             activation='tanh',
             # early_stopping=True,
             random_state=0
         )
     )
+    regressors['MLP_relu'] = make_pipeline(
+        preprocessing.QuantileTransformer(output_distribution='normal', random_state=0),
+        MLPRegressor(
+            hidden_layer_sizes=(80, 45),
+            solver='adam',
+            max_iter=20000,
+            activation='relu',
+            # early_stopping=True,
+            random_state=0
+        )
+    )
+    regressors['MLP_logistic'] = make_pipeline(
+        preprocessing.QuantileTransformer(output_distribution='normal', random_state=0),
+        MLPRegressor(
+            hidden_layer_sizes=(80, 45),
+            solver='adam',
+            max_iter=20000,
+            activation='logistic',
+            # early_stopping=True,
+            random_state=0
+        )
+    )
     regressors['BDT'] = AdaBoostRegressor(
-        DecisionTreeRegressor(max_depth=20, random_state=0),
-        n_estimators=500, random_state=0
+        DecisionTreeRegressor(max_depth=30, random_state=0),
+        n_estimators=1000, random_state=0
     )
     regressors['linear_regression'] = LinearRegression(n_jobs=4)
     regressors['ridge'] = Ridge(alpha=1.0)
