@@ -42,16 +42,16 @@ if __name__ == '__main__':
     all_models = event_classes.define_regressors()
     models_to_train = {
         # 'linear_regression': all_models['linear_regression'],
-        # 'random_forest': all_models['random_forest'],
+        # 'random_forest': all_models['random_forest'], # Do not use, performs bad and takes lots of disk space
         'MLP': all_models['MLP'],
         'MLP_relu': all_models['MLP_relu'],
         'MLP_logistic': all_models['MLP_logistic'],
         # 'MLP_uniform': all_models['MLP_uniform'],
         'MLP_small': all_models['MLP_small'],
         # 'MLP_lbfgs': all_models['MLP_lbfgs'],
-        # 'BDT': all_models['BDT'],
+        # 'BDT': all_models['BDT'], # Do not use, performs bad and takes lots of disk space
         # 'ridge': all_models['ridge'],
-        # 'SVR': all_models['SVR'],
+        # 'SVR': all_models['SVR'], # Do not use, performs bad and takes forever to apply
         # 'linear_SVR': all_models['linear_SVR'],
         # 'SGD': all_models['SGD'],
     }

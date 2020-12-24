@@ -47,18 +47,18 @@ if __name__ == '__main__':
 
     Path('plots').mkdir(parents=True, exist_ok=True)
 
-    # for this_trained_model_name, this_trained_model in trained_models.items():
-    #     plt = event_classes.plot_test_vs_predict(
-    #         dtf_e_test,
-    #         this_trained_model,
-    #         this_trained_model_name,
-    #         train_features,
-    #         labels
-    #     )
+    for this_trained_model_name, this_trained_model in trained_models.items():
+        plt = event_classes.plot_test_vs_predict(
+            dtf_e_test,
+            this_trained_model,
+            this_trained_model_name,
+            train_features,
+            labels
+        )
 
-    #     plt.savefig('plots/{}.pdf'.format(this_trained_model_name))
+        plt.savefig('plots/{}.pdf'.format(this_trained_model_name))
 
-    # plt.clf()
+    plt.clf()
 
     plt = event_classes.plot_score_comparison(dtf_e_test, trained_models, train_features, labels)
     plt.savefig('plots/compare_scores.pdf')
