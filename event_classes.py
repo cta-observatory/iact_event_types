@@ -2,6 +2,9 @@ import os
 import uproot
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
+from mpl_toolkits.axes_grid1.inset_locator import mark_inset
+from cycler import cycler
 import copy
 from collections import defaultdict
 from astropy.coordinates.angle_utilities import angular_separation
@@ -14,12 +17,97 @@ from pathlib import Path
 from joblib import dump, load
 from scipy.stats import mstats
 from sklearn.tree import DecisionTreeRegressor
-from sklearn.linear_model import LinearRegression, Ridge
+from sklearn.linear_model import LinearRegression, Ridge, SGDRegressor
 from sklearn.ensemble import RandomForestRegressor, AdaBoostRegressor
 from sklearn.neural_network import MLPRegressor
 from sklearn.svm import SVR, LinearSVR
 from sklearn import model_selection, preprocessing, feature_selection, ensemble, metrics
 from sklearn.pipeline import make_pipeline
+
+
+def setStyle(palette='default', bigPlot=False):
+    '''
+    A function to set the plotting style.
+    The function receives the colour palette name and whether it is
+    a big plot or not. The latter sets the fonts and marker to be bigger in case it is a big plot.
+    The available colour palettes are as follows:
+
+    - classic (default): A classic colourful palette with strong colours and contrast.
+    - modified classic: Similar to the classic, with slightly different colours.
+    - autumn: A slightly darker autumn style colour palette.
+    - purples: A pseudo sequential purple colour palette (not great for contrast).
+    - greens: A pseudo sequential green colour palette (not great for contrast).
+
+    To use the function, simply call it before plotting anything.
+
+    Parameters
+    ----------
+    palette: str
+    bigPlot: bool
+
+    Raises
+    ------
+    KeyError if provided palette does not exist.
+    '''
+
+    COLORS = dict()
+    COLORS['classic'] = ['#ba2c54', '#5B90DC', '#FFAB44', '#0C9FB3', '#57271B', '#3B507D',
+                         '#794D88', '#FD6989', '#8A978E', '#3B507D', '#D8153C', '#cc9214']
+    COLORS['modified classic'] = ['#D6088F', '#424D9C', '#178084', '#AF99DA', '#F58D46', '#634B5B',
+                                  '#0C9FB3', '#7C438A', '#328cd6', '#8D0F25', '#8A978E', '#ffcb3d']
+    COLORS['autumn'] = ['#A9434D', '#4E615D', '#3C8DAB', '#A4657A', '#424D9C', '#DC575A',
+                        '#1D2D38', '#634B5B', '#56276D', '#577580', '#134663', '#196096']
+    COLORS['purples'] = ['#a57bb7', '#343D80', '#EA60BF', '#B7308E', '#E099C3', '#7C438A',
+                         '#AF99DA', '#4D428E', '#56276D', '#CC4B93', '#DC4E76', '#5C4AE4']
+    COLORS['greens'] = ['#268F92', '#abc14d', '#8A978E', '#0C9FB3', '#BDA962', '#B0CB9E',
+                        '#769168', '#5E93A5', '#178084', '#B7BBAD', '#163317', '#76A63F']
+
+    COLORS['default'] = COLORS['classic']
+
+    MARKERS = ['o', 's', 'v', '^', '*', 'P', 'd', 'X', 'p', '<', '>', 'h']
+    LINES = [(0, ()),  # solid
+             (0, (1, 1)),  # densely dotted
+             (0, (3, 1, 1, 1)),  # densely dashdotted
+             (0, (5, 5)),  # dashed
+             (0, (3, 1, 1, 1, 1, 1)),  # densely dashdotdotted
+             (0, (5, 1)),  # desnely dashed
+             (0, (1, 5)),  # dotted
+             (0, (3, 5, 1, 5)),  # dashdotted
+             (0, (3, 5, 1, 5, 1, 5)),  # dashdotdotted
+             (0, (5, 10)),  # loosely dashed
+             (0, (1, 10)),  # loosely dotted
+             (0, (3, 10, 1, 10)),  # loosely dashdotted
+             ]
+
+    if palette not in COLORS.keys():
+        raise KeyError('palette must be one of {}'.format(', '.join(COLORS)))
+
+    fontsize = {'default': 15, 'bigPlot': 30}
+    markersize = {'default': 8, 'bigPlot': 18}
+    plotSize = 'default'
+    if bigPlot:
+        plotSize = 'bigPlot'
+
+    plt.rc('lines', linewidth=2, markersize=markersize[plotSize])
+    plt.rc('axes', prop_cycle=(
+        cycler(color=COLORS[palette])
+        + cycler(linestyle=LINES)
+        + cycler(marker=MARKERS))
+    )
+    plt.rc(
+        'axes',
+        titlesize=fontsize[plotSize],
+        labelsize=fontsize[plotSize],
+        labelpad=5,
+        grid=True,
+        axisbelow=True
+    )
+    plt.rc('xtick', labelsize=fontsize[plotSize])
+    plt.rc('ytick', labelsize=fontsize[plotSize])
+    plt.rc('legend', loc='best', shadow=False, fontsize='medium')
+    plt.rc('font', family='serif', size=fontsize[plotSize])
+
+    return
 
 
 def extract_df_from_dl2(root_filename):
@@ -167,6 +255,35 @@ def bin_data_in_energy(dtf, n_bins=20):
     return dtf_e
 
 
+def extract_energy_bins(e_ranges):
+    '''
+    Extract the energy bins from the list of energy ranges.
+    This is a little weird function which can probably be avoided if we use a class
+    instead of a namespace. However, it is useful for now so...
+
+    Parameters
+    ----------
+    e_ranges: list of str
+        A list of energy ranges in string form as '{:3.3f} < E < {:3.3f} TeV'.
+
+    Returns
+    -------
+    energy_bins: list of floats
+        Energy bins calculated as the averages of the energy ranges in e_ranges.
+    '''
+
+    energy_bins = list()
+
+    for this_range in e_ranges:
+
+        low_e = float(this_range.split()[0])
+        high_e = float(this_range.split()[4])
+
+        energy_bins.append((high_e + low_e)/2.)
+
+    return energy_bins
+
+
 def split_data_train_test(dtf_e, test_size=0.75):
     '''
     Split the data into training and testing datasets.
@@ -202,6 +319,44 @@ def split_data_train_test(dtf_e, test_size=0.75):
     return dtf_e_train, dtf_e_test
 
 
+def add_event_type_column(dtf, labels, n_types=2):
+    '''
+    Add an event type column by dividing the data into n_types bins with equal statistics
+    based on the labels column in dtf.
+    Unlike in most cases in this code, dtf is the DataFrame itself,
+    not a dict of energy ranges. This function should be called per energy bin.
+
+    Parameters
+    ----------
+    dtf: pandas DataFrames
+        A DataFrame to add event types to.
+    labels: str
+        Name of the variable used as the labels in the training.
+    n_types: int
+        The number of types to divide the data in.
+
+    Returns
+    -------
+    A DataFrame with an additional event_type column.
+    '''
+
+    event_type_quantiles = np.linspace(0, 1, n_types + 1)
+    event_types_bins = mstats.mquantiles(dtf[labels].values, event_type_quantiles)
+    event_types = list()
+    for this_value in dtf[labels].values:
+        this_event_type = np.searchsorted(event_types_bins, this_value)
+        if this_event_type < 1:
+            this_event_type = 1
+        if this_event_type > n_types:
+            this_event_type = n_types
+
+        event_types.append(this_event_type)
+
+    dtf.loc[:, 'event_type'] = event_types
+
+    return dtf
+
+
 def define_regressors():
     '''
     Define regressors to train the data with.
@@ -228,6 +383,7 @@ def define_regressors():
             solver='adam',
             max_iter=20000,
             activation='tanh',
+            tol=1e-5,
             # early_stopping=True,
             random_state=0
         )
@@ -235,10 +391,11 @@ def define_regressors():
     regressors['MLP_relu'] = make_pipeline(
         preprocessing.QuantileTransformer(output_distribution='normal', random_state=0),
         MLPRegressor(
-            hidden_layer_sizes=(80, 45),
+            hidden_layer_sizes=(100, 50),
             solver='adam',
             max_iter=20000,
             activation='relu',
+            tol=1e-5,
             # early_stopping=True,
             random_state=0
         )
@@ -250,6 +407,43 @@ def define_regressors():
             solver='adam',
             max_iter=20000,
             activation='logistic',
+            tol=1e-5,
+            # early_stopping=True,
+            random_state=0
+        )
+    )
+    regressors['MLP_uniform'] = make_pipeline(
+        preprocessing.QuantileTransformer(output_distribution='uniform', random_state=0),
+        MLPRegressor(
+            hidden_layer_sizes=(80, 45),
+            solver='adam',
+            max_iter=20000,
+            activation='tanh',
+            tol=1e-5,
+            # early_stopping=True,
+            random_state=0
+        )
+    )
+    regressors['MLP_small'] = make_pipeline(
+        preprocessing.QuantileTransformer(output_distribution='normal', random_state=0),
+        MLPRegressor(
+            hidden_layer_sizes=(36, 6),
+            solver='adam',
+            max_iter=20000,
+            activation='tanh',
+            tol=1e-5,
+            # early_stopping=True,
+            random_state=0
+        )
+    )
+    regressors['MLP_lbfgs'] = make_pipeline(
+        preprocessing.QuantileTransformer(output_distribution='normal', random_state=0),
+        MLPRegressor(
+            hidden_layer_sizes=(36, 6),
+            solver='lbfgs',
+            max_iter=20000,
+            activation='logistic',
+            tol=1e-5,
             # early_stopping=True,
             random_state=0
         )
@@ -263,7 +457,11 @@ def define_regressors():
     regressors['SVR'] = SVR(C=10.0, epsilon=0.2)
     regressors['linear_SVR'] = make_pipeline(
         preprocessing.StandardScaler(),
-        LinearSVR(random_state=0, tol=1e-5, C=10.0, epsilon=0.2, max_iter=10000)
+        LinearSVR(random_state=0, tol=1e-5, C=10.0, epsilon=0.2, max_iter=100000)
+    )
+    regressors['SGD'] = make_pipeline(
+        preprocessing.StandardScaler(),
+        SGDRegressor(loss='epsilon_insensitive', max_iter=20000, tol=1e-5)
     )
 
     return regressors
@@ -424,7 +622,7 @@ def load_models(regressor_names=list()):
     return trained_models
 
 
-def pearson_correlation(dtf):
+def plot_pearson_correlation(dtf, title):
     '''
     Calculate the Pearson correlation between all variables in this DataFrame.
 
@@ -432,6 +630,8 @@ def pearson_correlation(dtf):
     ----------
     dtf: pandas DataFrame
         The DataFrame containing the data.
+    title: str
+        A title to add to the olot (will be added to 'Pearson correlation')
 
     Returns
     -------
@@ -450,7 +650,8 @@ def pearson_correlation(dtf):
         cbar=True,
         linewidths=0.5
     )
-    plt.title('pearson correlations')
+    plt.title('Pearson correlations {}'.format(title))
+    plt.tight_layout()
 
     return plt
 
@@ -495,13 +696,17 @@ def plot_test_vs_predict(dtf_e_test, trained_models, trained_model_name, train_f
         ax = axs[int(np.floor((i_plot)/ncols)), (i_plot) % 4]
 
         ax.hist2d(y_pred, y_test, bins=(50, 50), cmap=plt.cm.jet)
-#         ax.plot([min(y_test), max(y_test)], [min(y_test),max(y_test)],
-#                  linestyle='--', lw=2, color='blue')
+        ax.plot(
+            [min(y_test), max(y_test)], [min(y_test), max(y_test)],
+            linestyle='--',
+            lw=2,
+            color='white'
+        )
+        ax.set_xlim(np.quantile(y_pred, [0.01, 0.99]))
+        ax.set_ylim(np.quantile(y_test, [0.01, 0.99]))
         ax.set_title(this_e_range)
         ax.set_ylabel('True')
         ax.set_xlabel('Predicted')
-        score = round(this_model.score(X_test, y_test), 4)
-        print('score({}) = {}'.format(this_e_range, score))
 
     axs[nrows - 1, ncols - 1].axis('off')
     axs[nrows - 1, ncols - 1].text(
@@ -513,6 +718,118 @@ def plot_test_vs_predict(dtf_e_test, trained_models, trained_model_name, train_f
         fontsize=18,
         transform=ax.transAxes
     )
+    plt.tight_layout()
+
+    return plt
+
+
+def plot_matrix(dtf, train_features, labels, n_types=2):
+    '''
+    Plot a matrix of each variable in train_features against another (not all combinations).
+    The data is divided to n_types bins of equal statistics based on the labels.
+    Each type is plotted in a different colour.
+    This function produces mutliple plots, where in each plot a maximum of 5 variables are plotted.
+    Unlike in most cases in this code, dtf is the DataFrame itself,
+    not a dict of energy ranges. This function should be called per energy bin.
+
+    Parameters
+    ----------
+    dtf: pandas DataFrames
+        A DataFrame to add event types to.
+    train_features: list
+        List of variable names trained with.
+    labels: str
+        Name of the variable used as the labels in the training.
+    n_types: int (default=2)
+            The number of types to divide the data in.
+
+
+    Returns
+    -------
+    A list of seaborn.PairGrid instances, each with one matrix plot.
+    '''
+
+    setStyle()
+
+    dtf = add_event_type_column(dtf, labels, n_types)
+
+    type_colors = {
+        1: "#ba2c54",
+        2: "#5B90DC",
+        3: '#FFAB44',
+        4: '#0C9FB3'
+    }
+
+    vars_to_plot = np.array_split(train_features, round(len(train_features)/5))
+    grid_plots = list()
+    for these_vars in vars_to_plot:
+        grid_plots.append(
+            sns.pairplot(
+                dtf,
+                vars=these_vars,
+                hue='event_type',
+                palette=type_colors,
+                corner=True
+            )
+        )
+
+    return grid_plots
+
+
+def plot_score_comparison(dtf_e_test, trained_models, train_features, labels):
+    '''
+    Plot the score of the model as a function of energy.
+
+    Parameters
+    ----------
+    dtf_e_test: dict of pandas DataFrames
+        Each entry in the dict is a DataFrame containing the data to test with.
+        The keys of the dict are the energy ranges of the data.
+        Each DataFrame is assumed to contain all 'train_features' and 'labels'.
+    trained_models: a nested dict of trained sklearn regressor per energy range.
+        1st dict:
+            keys=model names, values=2nd dict
+        2nd dict:
+            keys=energy ranges, values=trained models
+    train_features: list
+        List of variable names trained with.
+    labels: str
+        Name of the variable used as the labels in the training.
+
+
+    Returns
+    -------
+    A pyplot instance with the scores plot.
+    '''
+
+    setStyle()
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    scores = defaultdict(list)
+    rms_scores = defaultdict(list)
+    energy_bins = extract_energy_bins(trained_models[next(iter(trained_models))].keys())
+
+    for this_regressor_name, trained_model in trained_models.items():
+
+        print('Calculating scores for {}'.format(this_regressor_name))
+
+        for this_e_range, this_model in trained_model.items():
+
+            X_test = dtf_e_test[this_e_range][train_features].values
+            y_test = dtf_e_test[this_e_range][labels].values
+
+            y_pred = this_model.predict(X_test)
+
+            scores[this_regressor_name].append(this_model.score(X_test, y_test))
+            # rms_scores[this_regressor_name].append(metrics.mean_squared_error(y_test, y_pred))
+
+        ax.plot(energy_bins, scores[this_regressor_name], label=this_regressor_name)
+
+    ax.set_xlabel('E [TeV]')
+    ax.set_ylabel('score')
+    ax.set_xscale('log')
+    ax.legend()
     plt.tight_layout()
 
     return plt

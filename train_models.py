@@ -1,4 +1,5 @@
 import argparse
+from pathlib import Path
 import event_classes
 
 if __name__ == '__main__':
@@ -40,11 +41,19 @@ if __name__ == '__main__':
 
     all_models = event_classes.define_regressors()
     models_to_train = {
-        'linear_regression': all_models['linear_regression'],
-        'random_forest': all_models['random_forest'],
+        # 'linear_regression': all_models['linear_regression'],
+        # 'random_forest': all_models['random_forest'],
         'MLP': all_models['MLP'],
         'MLP_relu': all_models['MLP_relu'],
-        'MLP_logistic': all_models['MLP_logistic']
+        'MLP_logistic': all_models['MLP_logistic'],
+        # 'MLP_uniform': all_models['MLP_uniform'],
+        'MLP_small': all_models['MLP_small'],
+        # 'MLP_lbfgs': all_models['MLP_lbfgs'],
+        # 'BDT': all_models['BDT'],
+        # 'ridge': all_models['ridge'],
+        # 'SVR': all_models['SVR'],
+        # 'linear_SVR': all_models['linear_SVR'],
+        # 'SGD': all_models['SGD'],
     }
     trained_models = event_classes.train_models(
         dtf_e_train,
@@ -55,13 +64,15 @@ if __name__ == '__main__':
     event_classes.save_models(trained_models)
     event_classes.save_test_dtf(dtf_e_test)
 
-    for this_trained_model_name, this_trained_model in trained_models.items():
-        plt = event_classes.plot_test_vs_predict(
-            dtf_e_test,
-            this_trained_model,
-            this_trained_model_name,
-            train_features,
-            labels
-        )
+    # Path('plots').mkdir(parents=True, exist_ok=True)
 
-        plt.savefig('plots/{}.pdf'.format(this_trained_model_name))
+    # for this_trained_model_name, this_trained_model in trained_models.items():
+    #     plt = event_classes.plot_test_vs_predict(
+    #         dtf_e_test,
+    #         this_trained_model,
+    #         this_trained_model_name,
+    #         train_features,
+    #         labels
+    #     )
+
+    #     plt.savefig('plots/{}.pdf'.format(this_trained_model_name))
