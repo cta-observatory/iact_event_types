@@ -2,8 +2,6 @@ import os
 import uproot
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
-from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 from cycler import cycler
 import copy
 from collections import defaultdict
@@ -110,23 +108,14 @@ def setStyle(palette='default', bigPlot=False):
     return
 
 
-def extract_df_from_dl2(root_filename):
+def branches_to_read():
     '''
-    Extract a Pandas DataFrame from a ROOT DL2 file.
-    Selects all events surviving gamma/hadron cuts from the DL2 file.
-    No direction cut is applied on the sample. TODO: should this be an option or studied further?
-    The list of variables included in the DataFrame is subject to change.
-    TODO: Study further possible variables to use.
-
-    Parameters
-    ----------
-    root_filename: str or Path
-        The location of the DL2 root file name from which to extract the DF.
-        TODO: Allow using several DL2 files (in a higher level function?)
+    Define a list of branches to read from the ROOT file
+    (faster than reading all branches).
 
     Returns
     -------
-    A pandas DataFrame with variables to use in the regression, after cuts.
+    A list of branches names.
     '''
 
     branches = [
@@ -146,8 +135,91 @@ def extract_df_from_dl2(root_filename):
         'SizeSecondMax',
         'NTelPairs',
         'MSCW',
-        'MSCL'
+        'MSCL',
+        'EmissionHeight',
+        'EmissionHeightChi2',
+        'dist',
+        'DispDiff',
+        'dESabs',
+        'loss',
+        'NTrig',
+        'meanPedvar_Image',
+        'fui',
+        'cross',
+        'crossO',
+        'R',
+        'ES',
+        'MWR',
+        'MLR',
     ]
+
+    return branches
+
+
+def nominal_labels_train_features():
+    '''
+    Define the nominal labels variable and training features to train with.
+
+    Returns
+    -------
+    label: str, train_features: list of str
+         Two variables are returned:
+             1. the name of the variable to use as the labels in the training.
+             2. list of names of variables to used as the training features.
+    '''
+
+    labels = 'log_ang_diff'
+
+    train_features = [
+        'log_reco_energy',
+        'log_NTels_reco',
+        'array_distance',
+        'img2_ang',
+        'log_SizeSecondMax',
+        'MSCW',
+        'MSCL',
+        'log_EChi2S',
+        'log_av_size',
+        'log_EmissionHeight',
+        'log_EmissionHeightChi2',
+        'av_dist',
+        'log_DispDiff',
+        'log_dESabs',
+        'loss_sum',
+        'NTrig',
+        'meanPedvar_Image',
+        'av_fui',
+        'av_cross',
+        'av_crossO',
+        'av_R',
+        'av_ES',
+        'MWR',
+        'MLR',
+    ]
+
+    return labels, train_features
+
+
+def extract_df_from_dl2(root_filename):
+    '''
+    Extract a Pandas DataFrame from a ROOT DL2 file.
+    Selects all events surviving gamma/hadron cuts from the DL2 file.
+    No direction cut is applied on the sample. TODO: should this be an option or studied further?
+    The list of variables included in the DataFrame is subject to change.
+    TODO: Study further possible variables to use.
+
+    Parameters
+    ----------
+    root_filename: str or Path
+        The location of the DL2 root file name from which to extract the DF.
+        TODO: Allow using several DL2 files (in a higher level function?)
+
+    Returns
+    -------
+    A pandas DataFrame with variables to use in the regression, after cuts.
+    '''
+
+    branches = branches_to_read()
 
     particle_file = uproot.open(root_filename)
     data = particle_file['data']
@@ -193,6 +265,22 @@ def extract_df_from_dl2(root_filename):
     NTelPairs = data_arrays['NTelPairs'][gamma_like_events]
     MSCW = data_arrays['MSCW'][gamma_like_events]
     MSCL = data_arrays['MSCL'][gamma_like_events]
+    EmissionHeight = data_arrays['EmissionHeight'][gamma_like_events]
+    EmissionHeightChi2 = data_arrays['EmissionHeightChi2'][gamma_like_events]
+    dist = data_arrays['dist'][gamma_like_events]
+    av_dist = [np.average(dists) for dists in dist]
+    DispDiff = data_arrays['DispDiff'][gamma_like_events]
+    dESabs = data_arrays['dESabs'][gamma_like_events]
+    loss_sum = [np.sum(losses) for losses in data_arrays['loss'][gamma_like_events]]
+    NTrig = data_arrays['NTrig'][gamma_like_events]
+    meanPedvar_Image = data_arrays['meanPedvar_Image'][gamma_like_events]
+    av_fui = [np.average(fui) for fui in data_arrays['fui'][gamma_like_events]]
+    av_cross = [np.average(cross) for cross in data_arrays['cross'][gamma_like_events]]
+    av_crossO = [np.average(crossO) for crossO in data_arrays['crossO'][gamma_like_events]]
+    av_R = [np.average(R) for R in data_arrays['R'][gamma_like_events]]
+    av_ES = [np.average(ES) for ES in data_arrays['ES'][gamma_like_events]]
+    MWR = data_arrays['MWR'][gamma_like_events]
+    MLR = data_arrays['MLR'][gamma_like_events]
 
     # Build astropy table:
     t = Table()
@@ -208,6 +296,21 @@ def extract_df_from_dl2(root_filename):
     t['log_NTelPairs'] = np.log10(NTelPairs)
     t['MSCW'] = MSCW
     t['MSCL'] = MSCL
+    t['log_EmissionHeight'] = np.log10(EmissionHeight)
+    t['log_EmissionHeightChi2'] = np.log10(EmissionHeightChi2)
+    t['av_dist'] = av_dist
+    t['log_DispDiff'] = np.log10(DispDiff)
+    t['log_dESabs'] = np.log10(dESabs)
+    t['loss_sum'] = loss_sum
+    t['NTrig'] = NTrig
+    t['meanPedvar_Image'] = meanPedvar_Image
+    t['av_fui'] = av_fui
+    t['av_cross'] = av_cross
+    t['av_crossO'] = av_crossO
+    t['av_R'] = av_R
+    t['av_ES'] = av_ES
+    t['MWR'] = MWR
+    t['MLR'] = MLR
 
     return t.to_pandas()
 
@@ -364,7 +467,7 @@ def define_regressors():
     Regressors can be simple ones or pipelines that include standardisation or anything else.
     The parameters for the regressors are hard coded since they are expected to more or less
     stay constant once tuned.
-    TODO: Include a model selection method in the pipeline?
+    TODO: Include a feature selection method in the pipeline?
           That way it can be done automatically separately in each energy bin.
           (see https://scikit-learn.org/stable/modules/feature_selection.html).
 
@@ -375,7 +478,7 @@ def define_regressors():
 
     regressors = dict()
 
-    regressors['random_forest'] = RandomForestRegressor(n_estimators=1000, random_state=0, n_jobs=8)
+    regressors['random_forest'] = RandomForestRegressor(n_estimators=300, random_state=0, n_jobs=8)
     regressors['MLP'] = make_pipeline(
         preprocessing.QuantileTransformer(output_distribution='normal', random_state=0),
         MLPRegressor(
@@ -638,7 +741,7 @@ def plot_pearson_correlation(dtf, title):
     A pyplot instance with the Pearson correlation plot.
     '''
 
-    plt.subplots(figsize=[8, 8])
+    plt.subplots(figsize=[16, 16])
     corr_matrix = dtf.corr(method='pearson')
     sns.heatmap(
         corr_matrix,
@@ -760,7 +863,10 @@ def plot_matrix(dtf, train_features, labels, n_types=2):
         4: '#0C9FB3'
     }
 
-    vars_to_plot = np.array_split(train_features, round(len(train_features)/5))
+    vars_to_plot = np.array_split(
+        [labels] + train_features,
+        round(len([labels] + train_features)/5)
+    )
     grid_plots = list()
     for these_vars in vars_to_plot:
         grid_plots.append(

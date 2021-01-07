@@ -16,18 +16,7 @@ if __name__ == '__main__':
     dtf = event_classes.extract_df_from_dl2(dl2_file_name)
     dtf_e = event_classes.bin_data_in_energy(dtf)
 
-    labels = 'log_ang_diff'
-    train_features = [
-        'log_reco_energy',
-        'log_NTels_reco',
-        'array_distance',
-        'img2_ang',
-        'log_SizeSecondMax',
-        'MSCW',
-        'MSCL',
-        'log_EChi2S',
-        'log_av_size'
-    ]
+    labels, train_features = event_classes.nominal_labels_train_features()
 
     Path('plots/matrices').mkdir(parents=True, exist_ok=True)
     Path('plots/pearson').mkdir(parents=True, exist_ok=True)

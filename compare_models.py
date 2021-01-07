@@ -14,31 +14,21 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    labels = 'log_ang_diff'
-    train_features = [
-        'log_reco_energy',
-        'log_NTels_reco',
-        'array_distance',
-        'img2_ang',
-        'log_SizeSecondMax',
-        'MSCW',
-        'MSCL',
-        'log_EChi2S',
-        'log_av_size'
-    ]
+    labels, train_features = event_classes.nominal_labels_train_features()
+
     models_to_compare = [
-        # 'linear_regression',
-        # 'random_forest',
+        'linear_regression',
+        'random_forest',
         'MLP',
         'MLP_relu',
         'MLP_logistic',
         'MLP_uniform',
         'MLP_small',
         # 'MLP_lbfgs',
-        'BDT',
+        # 'BDT',
         'ridge',
         # 'SVR',
-        # 'linear_SVR',
+        'linear_SVR',
         # 'SGD',
     ]
 

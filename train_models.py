@@ -10,12 +10,6 @@ if __name__ == '__main__':
             'Results are saved in the models directory.'
         )
     )
-    parser.add_argument(
-        '-l',
-        '--labels',
-        help='Labels to train on.',
-        default='log_ang_diff'
-    )
 
     args = parser.parse_args()
 
@@ -26,28 +20,17 @@ if __name__ == '__main__':
 
     dtf_e_train, dtf_e_test = event_classes.split_data_train_test(dtf_e)
 
-    labels = args.labels
-    train_features = [
-        'log_reco_energy',
-        'log_NTels_reco',
-        'array_distance',
-        'img2_ang',
-        'log_SizeSecondMax',
-        'MSCW',
-        'MSCL',
-        'log_EChi2S',
-        'log_av_size'
-    ]
+    labels, train_features = event_classes.nominal_labels_train_features()
 
     all_models = event_classes.define_regressors()
     models_to_train = {
         # 'linear_regression': all_models['linear_regression'],
-        # 'random_forest': all_models['random_forest'], # Do not use, performs bad and takes lots of disk space
-        'MLP': all_models['MLP'],
-        'MLP_relu': all_models['MLP_relu'],
-        'MLP_logistic': all_models['MLP_logistic'],
+        'random_forest': all_models['random_forest'], # Do not use, performs bad and takes lots of disk space
+        # 'MLP': all_models['MLP'],
+        # 'MLP_relu': all_models['MLP_relu'],
+        # 'MLP_logistic': all_models['MLP_logistic'],
         # 'MLP_uniform': all_models['MLP_uniform'],
-        'MLP_small': all_models['MLP_small'],
+        # 'MLP_small': all_models['MLP_small'],
         # 'MLP_lbfgs': all_models['MLP_lbfgs'],
         # 'BDT': all_models['BDT'], # Do not use, performs bad and takes lots of disk space
         # 'ridge': all_models['ridge'],
