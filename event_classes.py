@@ -570,7 +570,7 @@ def define_regressors():
     return regressors
 
 
-def train_models(dtf_e_train, train_features, labels, regressors):
+def train_models(dtf_e_train, regressors):
     '''
     Train all the models in regressors, using the data in dtf_e_train.
     The models are trained per energy range in dtf_e_train.
@@ -581,21 +581,26 @@ def train_models(dtf_e_train, train_features, labels, regressors):
         Each entry in the dict is a DataFrame containing the data to train with.
         The keys of the dict are the energy ranges of the data.
         Each DataFrame is assumed to contain all 'train_features' and 'labels'.
-    train_features: list
-        List of variable names to train with.
-    labels: str
-        Name of the variable used as the labels in the training.
-    regressors: dict of sklearn regressors
-        A dictionary of regressors to train as returned from define_regressors().
+    regressors: a nested dict of regressors:
+        1st dict:
+            keys=model names, values=2nd dict
+        2nd dict:
+            'model':dict of sklearn regressors (as returned from define_regressors());
+            'train_features': list of variable names to train with.
+            'labels': Name of the variable used as the labels in the training.
 
 
     Returns
     -------
-    A nested dictionary trained models:
+    A nested dictionary trained models, train_features and labels:
         1st dict:
             keys=model names, values=2nd dict
         2nd dict:
-            keys=energy ranges, values=trained models
+            keys=energy ranges, values 3rd dict
+        3rd dict:
+            'model': traine model for this energy range
+            'train_features': list of variable names to train with.
+            'labels': Name of the variable used as the labels in the training.
     '''
 
     models = dict()
@@ -604,11 +609,14 @@ def train_models(dtf_e_train, train_features, labels, regressors):
         for this_e_range in dtf_e_train.keys():
 
             print('Training {} in the energy range - {}'.format(this_model, this_e_range))
-            X_train = dtf_e_train[this_e_range][train_features].values
-            y_train = dtf_e_train[this_e_range][labels].values
+            X_train = dtf_e_train[this_e_range][this_regressor['train_features']].values
+            y_train = dtf_e_train[this_e_range][this_regressor['labels']].values
 
-            models[this_model][this_e_range] = copy.deepcopy(
-                this_regressor.fit(X_train, y_train)
+            models[this_model][this_e_range] = dict()
+            models[this_model][this_e_range]['train_features'] = this_regressor['train_features']
+            models[this_model][this_e_range]['labels'] = this_regressor['labels']
+            models[this_model][this_e_range]['model'] = copy.deepcopy(
+                this_regressor['model'].fit(X_train, y_train)
             )
 
     return models
@@ -623,10 +631,14 @@ def save_models(trained_models):
     Parameters
     ----------
     trained_models: a nested dict of trained sklearn regressor per energy range.
-    1st dict:
-        keys=model names, values=2nd dict
-    2nd dict:
-        keys=energy ranges, values=trained models
+        1st dict:
+            keys=model names, values=2nd dict
+        2nd dict:
+            keys=energy ranges, values 3rd dict
+        3rd dict:
+            'model': trained model for this energy range
+            'train_features': list of variable names trained with.
+            'labels': Name of the variable used as the labels in the training.
     '''
 
     for regressor_name, this_regressor in trained_models.items():
@@ -697,15 +709,18 @@ def load_models(regressor_names=list()):
     ----------
     regressor_names: list of str
         A list of regressor names to load from disk
-        # TODO: take the default list from define_regressors()?
 
     Returns
     -------
     trained_models: a nested dict of trained sklearn regressor per energy range.
-    1st dict:
-        keys=model names, values=2nd dict
-    2nd dict:
-        keys=energy ranges, values=trained models
+        1st dict:
+            keys=model names, values=2nd dict
+        2nd dict:
+            keys=energy ranges, values 3rd dict
+        3rd dict:
+            'model': trained model for this energy range
+            'train_features': list of variable names trained with.
+            'labels': Name of the variable used as the labels in the training.
     '''
 
     trained_models = defaultdict(dict)
@@ -759,7 +774,7 @@ def plot_pearson_correlation(dtf, title):
     return plt
 
 
-def plot_test_vs_predict(dtf_e_test, trained_models, trained_model_name, train_features, labels):
+def plot_test_vs_predict(dtf_e_test, trained_models, trained_model_name):
     '''
     Plot true values vs. the predictions of the model for all energy bins.
 
@@ -769,15 +784,15 @@ def plot_test_vs_predict(dtf_e_test, trained_models, trained_model_name, train_f
         Each entry in the dict is a DataFrame containing the data to test with.
         The keys of the dict are the energy ranges of the data.
         Each DataFrame is assumed to contain all 'train_features' and 'labels'.
-    trained_models: dict of a trained sklearn regressor per energy range
-        (keys=energy ranges, values=trained models).
+    trained_models: a nested dict of one trained sklearn regressor per energy range.
+        1st dict:
+            keys=energy ranges, values 2nd dict
+        2nd dict:
+            'model': trained model for this energy range
+            'train_features': list of variable names trained with.
+            'labels': Name of the variable used as the labels in the training.
     trained_model_name: str
         Name of the regressor trained.
-    train_features: list
-        List of variable names trained with.
-    labels: str
-        Name of the variable used as the labels in the training.
-
 
     Returns
     -------
@@ -791,10 +806,10 @@ def plot_test_vs_predict(dtf_e_test, trained_models, trained_model_name, train_f
 
     for i_plot, (this_e_range, this_model) in enumerate(trained_models.items()):
 
-        X_test = dtf_e_test[this_e_range][train_features].values
-        y_test = dtf_e_test[this_e_range][labels].values
+        X_test = dtf_e_test[this_e_range][this_model['train_features']].values
+        y_test = dtf_e_test[this_e_range][this_model['labels']].values
 
-        y_pred = this_model.predict(X_test)
+        y_pred = this_model['model'].predict(X_test)
 
         ax = axs[int(np.floor((i_plot)/ncols)), (i_plot) % 4]
 
@@ -882,9 +897,10 @@ def plot_matrix(dtf, train_features, labels, n_types=2):
     return grid_plots
 
 
-def plot_score_comparison(dtf_e_test, trained_models, train_features, labels):
+def plot_score_comparison(dtf_e_test, trained_models):
     '''
     Plot the score of the model as a function of energy.
+    #TODO add a similar function that plots from saved scores instead of calculating every time.
 
     Parameters
     ----------
@@ -896,12 +912,11 @@ def plot_score_comparison(dtf_e_test, trained_models, train_features, labels):
         1st dict:
             keys=model names, values=2nd dict
         2nd dict:
-            keys=energy ranges, values=trained models
-    train_features: list
-        List of variable names trained with.
-    labels: str
-        Name of the variable used as the labels in the training.
-
+            keys=energy ranges, values 3rd dict
+        3rd dict:
+            'model': dict of trained models for this energy range
+            'train_features': list of variable names trained with.
+            'labels': Name of the variable used as the labels in the training.
 
     Returns
     -------
@@ -922,12 +937,12 @@ def plot_score_comparison(dtf_e_test, trained_models, train_features, labels):
 
         for this_e_range, this_model in trained_model.items():
 
-            X_test = dtf_e_test[this_e_range][train_features].values
-            y_test = dtf_e_test[this_e_range][labels].values
+            X_test = dtf_e_test[this_e_range][this_model['train_features']].values
+            y_test = dtf_e_test[this_e_range][this_model['labels']].values
 
-            y_pred = this_model.predict(X_test)
+            y_pred = this_model['model'].predict(X_test)
 
-            scores[this_regressor_name].append(this_model.score(X_test, y_test))
+            scores[this_regressor_name].append(this_model['model'].score(X_test, y_test))
             # rms_scores[this_regressor_name].append(metrics.mean_squared_error(y_test, y_pred))
 
         ax.plot(energy_bins, scores[this_regressor_name], label=this_regressor_name)

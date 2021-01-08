@@ -1,12 +1,13 @@
 import argparse
 from pathlib import Path
+import copy
 import event_classes
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(
         description=(
-            'Train event classes models.'
+            'Train event classes model with various training features.'
             'Results are saved in the models directory.'
         )
     )
@@ -23,25 +24,29 @@ if __name__ == '__main__':
     labels, train_features = event_classes.nominal_labels_train_features()
 
     all_models = event_classes.define_regressors()
-    models_to_train = {
-        # 'linear_regression': all_models['linear_regression'],
-        # 'random_forest': all_models['random_forest'], # Do not use, performs bad and takes lots of disk space
-        # 'MLP': all_models['MLP'],
-        # 'MLP_relu': all_models['MLP_relu'],
-        # 'MLP_logistic': all_models['MLP_logistic'],
-        # 'MLP_uniform': all_models['MLP_uniform'],
-        # 'MLP_small': all_models['MLP_small'],
-        # 'MLP_lbfgs': all_models['MLP_lbfgs'],
-        # 'BDT': all_models['BDT'], # Do not use, performs bad and takes lots of disk space
-        # 'ridge': all_models['ridge'],
-        # 'SVR': all_models['SVR'], # Do not use, performs bad and takes forever to apply
-        # 'linear_SVR': all_models['linear_SVR'],
-        # 'SGD': all_models['SGD'],
-    }
 
-    for this_model in models_to_train.values():
-        this_model['train_features'] = train_features
-        this_model['labels'] = labels
+    vars_to_remove = [
+        'loss_sum',
+        'NTrig',
+        'meanPedvar_Image',
+        'av_fui',
+        'av_cross',
+        'av_crossO',
+        'av_R',
+        'av_ES',
+        'MWR',
+        'MLR',
+    ]
+
+    models_to_train = dict()
+    for this_var in vars_to_remove:
+        _vars = copy.copy(train_features)
+        _vars.remove(this_var)
+        model_name = 'MLP_{}'.format(this_var)
+        models_to_train[model_name] = dict()
+        models_to_train[model_name]['train_features'] = _vars
+        models_to_train[model_name]['labels'] = labels
+        models_to_train[model_name]['model'] = all_models['MLP_small']
 
     trained_models = event_classes.train_models(
         dtf_e_train,
