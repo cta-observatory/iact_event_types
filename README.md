@@ -1,4 +1,10 @@
-# ED_event_type_training
+# IACT event types
+
+A set of scripts for testing event types on IACT DL2 data.
+
+# Requirements
+
+Please note this is still work in progress. Documentation is outdated and clearly lacking.
 
 Before trying to execute the notebooks, you will need some eventDisplay input files. These are root files containing DL2 information from the eventDisplay analysis done by Gernot Maire at DESY.
 
@@ -10,3 +16,5 @@ The easiest way to download them is here:
 * https://ccdcacli236.in2p3.fr:2880/vo.cta.in2p3.fr/MC/PROD3/DL2_evndisp/LaPalma_20deg/
 
 Once you download some gamma root files, you can start playing around with the 2 notebooks.
+
+
