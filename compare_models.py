@@ -1,3 +1,4 @@
+import numpy as np
 import argparse
 from pathlib import Path
 import event_classes
@@ -16,10 +17,13 @@ if __name__ == '__main__':
 
     labels, train_features = event_classes.nominal_labels_train_features()
 
-    #FIXME
-    vars_to_remove = ['meanPedvar_Image', 'av_cross', 'av_crossO']
-    for this_var in vars_to_remove:
-        train_features.remove(this_var)
+    plot_predict_dist = False
+    plot_scores = False
+    plot_confusion_matrix = True
+    n_types = 4
+
+    Path('plots').mkdir(parents=True, exist_ok=True)
+    dtf_e_test = event_classes.load_test_dtf()
 
     # models_to_compare = [
     #     # 'linear_regression',
@@ -28,7 +32,7 @@ if __name__ == '__main__':
     #     # 'MLP_relu',
     #     # 'MLP_logistic',
     #     # 'MLP_uniform',
-    #     # 'MLP_small',
+    #     'MLP_small',
     #     # 'MLP_lbfgs',
     #     # 'BDT',
     #     # 'ridge',
@@ -36,40 +40,60 @@ if __name__ == '__main__':
     #     # 'linear_SVR',
     #     # 'SGD',
     #     # 'MLP_small_less_vars',
-    #     'MLP_meanPedvar_av_cross_O',
+    #     # 'MLP_meanPedvar_av_cross_O',
     # ]
-
-    models_to_compare = [
-        'MLP_loss_sum',
-        'MLP_NTrig',
-        'MLP_meanPedvar_Image',
-        'MLP_av_fui',
-        'MLP_av_cross',
-        'MLP_av_crossO',
-        'MLP_av_R',
-        'MLP_av_ES',
-        'MLP_MWR',
-        'MLP_MLR',
-    ]
-
-    trained_models = event_classes.load_models(models_to_compare)
-    dtf_e_test = event_classes.load_test_dtf()
-
-    Path('plots').mkdir(parents=True, exist_ok=True)
-
-    for this_trained_model_name, this_trained_model in trained_models.items():
-        plt = event_classes.plot_test_vs_predict(
-            dtf_e_test,
-            this_trained_model,
-            this_trained_model_name,
-            # train_features,
-            # labels
+    # models_to_compare = ['MLP_{}'.format(var) for var in train_features]
+    # models_to_compare = ['All', 'features_1', 'features_2', 'features_3', 'features_4']
+    # models_to_compare = ['All', 'features_5', 'features_6', 'features_7', 'features_8']
+    models_to_compare = ['All']
+    if len(models_to_compare) > 1:
+        group_models_to_compare = np.array_split(
+            models_to_compare,
+            round(len(models_to_compare)/5)
         )
+    else:
+        group_models_to_compare = [models_to_compare]
 
-        plt.savefig('plots/{}.pdf'.format(this_trained_model_name))
+    for i_group, these_models_to_compare in enumerate(group_models_to_compare):
 
-    plt.clf()
+        trained_models = event_classes.load_models(these_models_to_compare)
 
-    plt = event_classes.plot_score_comparison(dtf_e_test, trained_models)
-    plt.savefig('plots/compare_scores.pdf')
-    plt.clf()
+        if plot_predict_dist:
+            for this_trained_model_name, this_trained_model in trained_models.items():
+                plt = event_classes.plot_test_vs_predict(
+                    dtf_e_test,
+                    this_trained_model,
+                    this_trained_model_name
+                )
+
+                plt.savefig('plots/{}_predict_dist.pdf'.format(this_trained_model_name))
+                plt.savefig('plots/{}_predict_dist.png'.format(this_trained_model_name))
+
+            plt.clf()
+
+        if plot_scores:
+            plt = event_classes.plot_score_comparison(dtf_e_test, trained_models)
+            plt.savefig('plots/scores_features_{}.pdf'.format(i_group + 1))
+            plt.savefig('plots/scores_features_{}.png'.format(i_group + 1))
+            plt.clf()
+
+        if plot_confusion_matrix:
+
+            event_types = event_classes.partition_event_types(dtf_e_test, trained_models, n_types)
+            for this_trained_model_name, this_event_types in event_types.items():
+                plt = event_classes.plot_confusion_matrix(
+                    this_event_types,
+                    this_trained_model_name,
+                    n_types
+                )
+
+                plt.savefig('plots/{}_confusion_matrix_n_types_{}.pdf'.format(
+                    this_trained_model_name,
+                    n_types
+                ))
+                plt.savefig('plots/{}_confusion_matrix_n_types_{}.png'.format(
+                    this_trained_model_name,
+                    n_types
+                ))
+
+            plt.clf()

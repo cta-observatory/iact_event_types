@@ -25,28 +25,31 @@ if __name__ == '__main__':
 
     all_models = event_classes.define_regressors()
 
-    vars_to_remove = [
-        'loss_sum',
-        'NTrig',
-        'meanPedvar_Image',
-        'av_fui',
-        'av_cross',
-        'av_crossO',
-        'av_R',
-        'av_ES',
-        'MWR',
-        'MLR',
-    ]
+    # vars_to_remove = train_features
 
     models_to_train = dict()
-    for this_var in vars_to_remove:
-        _vars = copy.copy(train_features)
-        _vars.remove(this_var)
-        model_name = 'MLP_{}'.format(this_var)
-        models_to_train[model_name] = dict()
-        models_to_train[model_name]['train_features'] = _vars
-        models_to_train[model_name]['labels'] = labels
-        models_to_train[model_name]['model'] = all_models['MLP_small']
+    # for this_var in vars_to_remove:
+    #     _vars = copy.copy(train_features)
+    #     _vars.remove(this_var)
+    #     model_name = 'MLP_{}'.format(this_var)
+    #     models_to_train[model_name] = dict()
+    #     models_to_train[model_name]['train_features'] = _vars
+    #     models_to_train[model_name]['labels'] = labels
+    #     models_to_train[model_name]['model'] = all_models['MLP_small']
+
+    features = dict()
+    features['All'] = train_features
+    features['features_5'] = ['img2_ang', 'log_SizeSecondMax', 'log_EmissionHeight', 'av_dist', 'av_cross', 'MWR', 'MLR', 'MSCW', 'MSCL', 'log_EmissionHeightChi2', 'log_DispDiff']
+    features['features_6'] = features['features_5'] + ['MSWOL']
+    features['features_7'] = features['features_6'] + ['MWOL']
+    features['features_8'] = features['All'] + ['MSWOL'] + ['MWOL']
+
+    for features_name, these_features in features.items():
+        print(features_name, these_features)
+        models_to_train[features_name] = dict()
+        models_to_train[features_name]['train_features'] = these_features
+        models_to_train[features_name]['labels'] = labels
+        models_to_train[features_name]['model'] = all_models['MLP_small']
 
     trained_models = event_classes.train_models(
         dtf_e_train,
