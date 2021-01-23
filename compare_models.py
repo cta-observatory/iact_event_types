@@ -20,7 +20,7 @@ if __name__ == '__main__':
     plot_predict_dist = False
     plot_scores = False
     plot_confusion_matrix = True
-    n_types = 4
+    n_types = 2
 
     Path('plots').mkdir(parents=True, exist_ok=True)
     dtf_e_test = event_classes.load_test_dtf()
@@ -95,5 +95,20 @@ if __name__ == '__main__':
                     this_trained_model_name,
                     n_types
                 ))
+
+            plt = event_classes.plot_1d_confusion_matrix(
+                this_event_types,
+                this_trained_model_name,
+                n_types
+            )
+
+            plt.savefig('plots/{}_1d_confusion_matrix_n_types_{}.pdf'.format(
+                this_trained_model_name,
+                n_types
+            ))
+            plt.savefig('plots/{}_1d_confusion_matrix_n_types_{}.png'.format(
+                this_trained_model_name,
+                n_types
+            ))
 
             plt.clf()

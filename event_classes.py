@@ -664,8 +664,6 @@ def save_test_dtf(dtf_e_test):
     '''
     Save the test data to disk so it can be loaded together with load_models().
     The path for the test data is in models/test_data.
-    # TODO: This is stupid to save the actual data,
-            better to simply save a list of event numbers or something.
 
     Parameters
     ----------
@@ -687,8 +685,6 @@ def load_test_dtf():
     '''
     Load the test data together with load_models().
     The path for the test data is in models/test_data.
-    # TODO: This is stupid to save the actual data,
-            better to simply save a list of event numbers or something.
 
     Returns
     -------
@@ -782,11 +778,10 @@ def partition_event_types(dtf_e_test, trained_models, n_types=2):
     event_types = dict()
 
     for model_name, model in trained_models.items():
-        
-        event_types[model_name] = dict()
-        
-        for this_e_range, this_model in model.items():
 
+        event_types[model_name] = dict()
+
+        for this_e_range, this_model in model.items():
 
             event_types[model_name][this_e_range] = defaultdict(list)
             event_types[model_name][this_e_range] = defaultdict(list)
@@ -1073,11 +1068,83 @@ def plot_confusion_matrix(event_types, trained_model_name, n_types=2):
             fmt='d',
             ax=ax,
             cmap='Blues',
+            cbar=False,
             xticklabels=['{}'.format(tick) for tick in np.arange(1, n_types + 1, 1)],
             yticklabels=['{}'.format(tick) for tick in np.arange(1, n_types + 1, 1)]
         )
         ax.set_xlabel('Prediction')
         ax.set_ylabel('True')
+        ax.set_title(this_e_range)
+
+    axs[nrows - 1, ncols - 1].axis('off')
+    axs[nrows - 1, ncols - 1].text(
+        0.5,
+        0.5,
+        trained_model_name,
+        horizontalalignment='center',
+        verticalalignment='center',
+        fontsize=18,
+        transform=axs[nrows - 1, ncols - 1].transAxes
+    )
+    plt.tight_layout()
+
+    return plt
+
+
+def plot_1d_confusion_matrix(event_types, trained_model_name, n_types=2):
+    '''
+    Plot a one-dimensional confusion matrix of the model for all energy bins.
+
+    Parameters
+    ----------
+    event_types: nested dict
+        1st dict:
+            keys=energy ranges, values=2nd dict
+        2nd dict:
+            keys=true or reco, values=event type
+    trained_model_name: str
+        Name of the regressor used to obtained the reconstructed event types
+    n_types: int (default=2)
+        The number of types the data was divided in.
+
+    Returns
+    -------
+    A pyplot instance with the one-dimensional confusion matrix plot.
+    '''
+
+    # setStyle()
+
+    nrows = 5
+    ncols = 4
+
+    fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=[14, 10])
+
+    for i_plot, this_e_range in enumerate(event_types.keys()):
+
+        ax = axs[int(np.floor((i_plot)/ncols)), (i_plot) % ncols]
+
+        pred_error = np.abs(
+            np.array(event_types[this_e_range]['true']) - np.array(event_types[this_e_range]['reco'])
+        )
+        frac_pred_error = list()
+        for i_type in range(n_types):
+            frac_pred_error.append(np.sum(pred_error == i_type)/len(pred_error))
+
+        df = pd.DataFrame(
+            {"Prediction accuracy": frac_pred_error},
+            index=['correct'] + ['{} off'.format(off) for off in range(1, n_types)]
+        )
+
+        sns.heatmap(
+            df.T,
+            annot=True,
+            fmt='.1%',
+            ax=ax,
+            cmap='Blues',
+            square=True,
+            cbar=False,
+        )
+        ax.set_yticklabels(ax.get_yticklabels(), va='center')
         ax.set_title(this_e_range)
 
     axs[nrows - 1, ncols - 1].axis('off')
