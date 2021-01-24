@@ -13,7 +13,7 @@ import pandas as pd
 import seaborn as sns
 from pathlib import Path
 from joblib import dump, load
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, f1_score
 from scipy.stats import mstats
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.linear_model import LinearRegression, Ridge, SGDRegressor
@@ -1131,7 +1131,7 @@ def plot_1d_confusion_matrix(event_types, trained_model_name, n_types=2):
             frac_pred_error.append(np.sum(pred_error == i_type)/len(pred_error))
 
         df = pd.DataFrame(
-            {"Prediction accuracy": frac_pred_error},
+            {'Prediction accuracy': frac_pred_error},
             index=['correct'] + ['{} off'.format(off) for off in range(1, n_types)]
         )
 
@@ -1145,7 +1145,15 @@ def plot_1d_confusion_matrix(event_types, trained_model_name, n_types=2):
             cbar=False,
         )
         ax.set_yticklabels(ax.get_yticklabels(), va='center')
-        ax.set_title(this_e_range)
+        ax.set_title(
+            'Score(F1) = {:.2f}\n{}'.format(
+                f1_score(
+                    event_types[this_e_range]['true'],
+                    event_types[this_e_range]['reco'],
+                    average='macro'
+                ), this_e_range
+            )
+        )
 
     axs[nrows - 1, ncols - 1].axis('off')
     axs[nrows - 1, ncols - 1].text(

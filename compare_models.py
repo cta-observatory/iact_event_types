@@ -20,7 +20,7 @@ if __name__ == '__main__':
     plot_predict_dist = False
     plot_scores = False
     plot_confusion_matrix = True
-    n_types = 2
+    n_types = 4
 
     Path('plots').mkdir(parents=True, exist_ok=True)
     dtf_e_test = event_classes.load_test_dtf()
