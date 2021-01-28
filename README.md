@@ -6,7 +6,7 @@ A set of scripts for testing event types on IACT DL2 data.
 
 Please note this is still work in progress. Documentation is outdated and clearly lacking.
 
-Before trying to execute the notebooks, you will need some eventDisplay input files. These are root files containing DL2 information from the eventDisplay analysis done by Gernot Maire at DESY.
+Before trying to execute the notebooks, you will need some eventDisplay input files. These are root files containing DL2 information from the eventDisplay analysis done by Gernot Maier at DESY.
 
 A description of their content and links to download them can be found here:
 * https://forge.in2p3.fr/projects/cta_analysis-and-simulations/wiki/Eventdisplay_Prod3b_DL2_Lists
