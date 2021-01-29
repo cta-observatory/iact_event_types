@@ -13,6 +13,7 @@ import pandas as pd
 import seaborn as sns
 from pathlib import Path
 from joblib import dump, load
+from sklearn.metrics import confusion_matrix, f1_score
 from scipy.stats import mstats
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.linear_model import LinearRegression, Ridge, SGDRegressor
@@ -195,6 +196,7 @@ def nominal_labels_train_features():
         'av_ES',
         'MWR',
         'MLR',
+        'MSWOL',
     ]
 
     return labels, train_features
@@ -311,6 +313,8 @@ def extract_df_from_dl2(root_filename):
     t['av_ES'] = av_ES
     t['MWR'] = MWR
     t['MLR'] = MLR
+    t['MSWOL'] = MSCW/MSCL
+    t['MWOL'] = MWR/MLR
 
     return t.to_pandas()
 
@@ -660,8 +664,6 @@ def save_test_dtf(dtf_e_test):
     '''
     Save the test data to disk so it can be loaded together with load_models().
     The path for the test data is in models/test_data.
-    # TODO: This is stupid to save the actual data,
-            better to simply save a list of event numbers or something.
 
     Parameters
     ----------
@@ -683,8 +685,6 @@ def load_test_dtf():
     '''
     Load the test data together with load_models().
     The path for the test data is in models/test_data.
-    # TODO: This is stupid to save the actual data,
-            better to simply save a list of event numbers or something.
 
     Returns
     -------
@@ -738,6 +738,79 @@ def load_models(regressor_names=list()):
             trained_models[regressor_name][e_range_name] = load(this_file)
 
     return trained_models
+
+
+def partition_event_types(dtf_e_test, trained_models, n_types=2):
+    '''
+    Divide the events into n_types event types.
+    The bins defining the types are calculated from the true label values.
+    Two lists of types are returned per model and per energy range, one true and one predicted.
+
+    Parameters
+    ----------
+    dtf_e_test: dict of pandas DataFrames
+        Each entry in the dict is a DataFrame containing the data to test with.
+        The keys of the dict are the energy ranges of the data.
+        Each DataFrame is assumed to contain all 'train_features' and 'labels'.
+    trained_models: a nested dict of trained sklearn regressor per energy range.
+            1st dict:
+                keys=model names, values=2nd dict
+            2nd dict:
+                keys=energy ranges, values 3rd dict
+            3rd dict:
+                'model': trained model for this energy range
+                'train_features': list of variable names trained with.
+                'labels': Name of the variable used as the labels in the training.
+    n_types: int (default=2)
+            The number of types to divide the data in.
+
+    Returns
+    -------
+    event_types: nested dict
+        1st dict:
+            keys=model names, values=2nd dict
+        2nd dict:
+            keys=energy ranges, values=3rddict
+        3rd dict:
+            keys=true or reco, values=event type
+    '''
+
+    event_types = dict()
+
+    for model_name, model in trained_models.items():
+
+        event_types[model_name] = dict()
+
+        for this_e_range, this_model in model.items():
+
+            event_types[model_name][this_e_range] = defaultdict(list)
+            event_types[model_name][this_e_range] = defaultdict(list)
+
+            event_types_bins = mstats.mquantiles(
+                dtf_e_test[this_e_range][this_model['labels']].values,
+                np.linspace(0, 1, n_types + 1)
+            )
+
+            for this_value in dtf_e_test[this_e_range][this_model['labels']].values:
+                this_event_type = np.searchsorted(event_types_bins, this_value)
+                if this_event_type < 1:
+                    this_event_type = 1
+                if this_event_type > n_types:
+                    this_event_type = n_types
+                event_types[model_name][this_e_range]['true'].append(this_event_type)
+
+            X_test = dtf_e_test[this_e_range][this_model['train_features']].values
+            y_pred = this_model['model'].predict(X_test)
+
+            for this_value in y_pred:
+                this_event_type = np.searchsorted(event_types_bins, this_value)
+                if this_event_type < 1:
+                    this_event_type = 1
+                if this_event_type > n_types:
+                    this_event_type = n_types
+                event_types[model_name][this_e_range]['reco'].append(this_event_type)
+
+    return event_types
 
 
 def plot_pearson_correlation(dtf, title):
@@ -811,7 +884,7 @@ def plot_test_vs_predict(dtf_e_test, trained_models, trained_model_name):
 
         y_pred = this_model['model'].predict(X_test)
 
-        ax = axs[int(np.floor((i_plot)/ncols)), (i_plot) % 4]
+        ax = axs[int(np.floor((i_plot)/ncols)), (i_plot) % ncols]
 
         ax.hist2d(y_pred, y_test, bins=(50, 50), cmap=plt.cm.jet)
         ax.plot(
@@ -828,13 +901,13 @@ def plot_test_vs_predict(dtf_e_test, trained_models, trained_model_name):
 
     axs[nrows - 1, ncols - 1].axis('off')
     axs[nrows - 1, ncols - 1].text(
-        1.5,
+        0.5,
         0.5,
         trained_model_name,
         horizontalalignment='left',
         verticalalignment='center',
         fontsize=18,
-        transform=ax.transAxes
+        transform=axs[nrows - 1, ncols - 1].transAxes
     )
     plt.tight_layout()
 
@@ -951,6 +1024,147 @@ def plot_score_comparison(dtf_e_test, trained_models):
     ax.set_ylabel('score')
     ax.set_xscale('log')
     ax.legend()
+    plt.tight_layout()
+
+    return plt
+
+
+def plot_confusion_matrix(event_types, trained_model_name, n_types=2):
+    '''
+    Plot the confusion matrix of the model for all energy bins.
+
+    Parameters
+    ----------
+    event_types: nested dict
+        1st dict:
+            keys=energy ranges, values=2nd dict
+        2nd dict:
+            keys=true or reco, values=event type
+    trained_model_name: str
+        Name of the regressor used to obtained the reconstructed event types
+    n_types: int (default=2)
+        The number of types the data was divided in.
+
+    Returns
+    -------
+    A pyplot instance with the confusion matrix plot.
+    '''
+
+    # setStyle()
+
+    nrows = 5
+    ncols = 4
+
+    fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=[14, 18])
+
+    for i_plot, this_e_range in enumerate(event_types.keys()):
+
+        ax = axs[int(np.floor((i_plot)/ncols)), (i_plot) % ncols]
+
+        cm = confusion_matrix(event_types[this_e_range]['true'], event_types[this_e_range]['reco'])
+        sns.heatmap(
+            cm,
+            annot=True,
+            fmt='d',
+            ax=ax,
+            cmap='Blues',
+            cbar=False,
+            xticklabels=['{}'.format(tick) for tick in np.arange(1, n_types + 1, 1)],
+            yticklabels=['{}'.format(tick) for tick in np.arange(1, n_types + 1, 1)]
+        )
+        ax.set_xlabel('Prediction')
+        ax.set_ylabel('True')
+        ax.set_title(this_e_range)
+
+    axs[nrows - 1, ncols - 1].axis('off')
+    axs[nrows - 1, ncols - 1].text(
+        0.5,
+        0.5,
+        trained_model_name,
+        horizontalalignment='center',
+        verticalalignment='center',
+        fontsize=18,
+        transform=axs[nrows - 1, ncols - 1].transAxes
+    )
+    plt.tight_layout()
+
+    return plt
+
+
+def plot_1d_confusion_matrix(event_types, trained_model_name, n_types=2):
+    '''
+    Plot a one-dimensional confusion matrix of the model for all energy bins.
+
+    Parameters
+    ----------
+    event_types: nested dict
+        1st dict:
+            keys=energy ranges, values=2nd dict
+        2nd dict:
+            keys=true or reco, values=event type
+    trained_model_name: str
+        Name of the regressor used to obtained the reconstructed event types
+    n_types: int (default=2)
+        The number of types the data was divided in.
+
+    Returns
+    -------
+    A pyplot instance with the one-dimensional confusion matrix plot.
+    '''
+
+    # setStyle()
+
+    nrows = 5
+    ncols = 4
+
+    fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=[14, 10])
+
+    for i_plot, this_e_range in enumerate(event_types.keys()):
+
+        ax = axs[int(np.floor((i_plot)/ncols)), (i_plot) % ncols]
+
+        pred_error = np.abs(
+            np.array(event_types[this_e_range]['true']) - np.array(event_types[this_e_range]['reco'])
+        )
+        frac_pred_error = list()
+        for i_type in range(n_types):
+            frac_pred_error.append(np.sum(pred_error == i_type)/len(pred_error))
+
+        df = pd.DataFrame(
+            {'Prediction accuracy': frac_pred_error},
+            index=['correct'] + ['{} off'.format(off) for off in range(1, n_types)]
+        )
+
+        sns.heatmap(
+            df.T,
+            annot=True,
+            fmt='.1%',
+            ax=ax,
+            cmap='Blues',
+            square=True,
+            cbar=False,
+        )
+        ax.set_yticklabels(ax.get_yticklabels(), va='center')
+        ax.set_title(
+            'Score(F1) = {:.2f}\n{}'.format(
+                f1_score(
+                    event_types[this_e_range]['true'],
+                    event_types[this_e_range]['reco'],
+                    average='macro'
+                ), this_e_range
+            )
+        )
+
+    axs[nrows - 1, ncols - 1].axis('off')
+    axs[nrows - 1, ncols - 1].text(
+        0.5,
+        0.5,
+        trained_model_name,
+        horizontalalignment='center',
+        verticalalignment='center',
+        fontsize=18,
+        transform=axs[nrows - 1, ncols - 1].transAxes
+    )
     plt.tight_layout()
 
     return plt
