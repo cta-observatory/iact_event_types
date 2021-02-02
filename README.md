@@ -7,6 +7,18 @@ The scripts for the various event type studies are in the scripts directory. Spe
 The recommended way to study, e.g., regression, is to first run the train_models.py script after selecting the models you would like to train.
 Once the models are trained, run the compare_models.py scripts, making sure the models in the list to compare were trained beforehand.
 
+# Setup
+
+ ```
+ conda env create -n event_types -f environment.yml
+ source activate event_types
+ python setup.py install
+ ```
+
+Once the package is set up, next time just run
+
+```source activate event_types```
+
 # Requirements
 
 Please note this is still work in progress. Documentation is outdated and clearly lacking.
