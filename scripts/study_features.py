@@ -14,8 +14,10 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    # dl2_file_name = '/lustre/fs21/group/cta/users/maierg/analysis/AnalysisData/uploadDL2/Paranal_20deg/gamma_cone.S.3HB9-FD_ID0.eff-0.root'
-    dl2_file_name = '/lustre/fs21/group/cta/users/maierg/analysis/AnalysisData/uploadDL2/Paranal_20deg/gamma_onSource.S.3HB9-FD_ID0.eff-0.root'
+    dl2_file_name = (
+        '/lustre/fs21/group/cta/users/maierg/analysis/AnalysisData/uploadDL2/'
+        'Paranal_20deg/gamma_onSource.S.3HB9-FD_ID0.eff-0.root'
+    )
     dtf = event_types.extract_df_from_dl2(dl2_file_name)
     dtf_e = event_types.bin_data_in_energy(dtf)
 
@@ -39,7 +41,19 @@ if __name__ == '__main__':
 
     features = dict()
     features['All'] = train_features
-    features['features_5'] = ['img2_ang', 'log_SizeSecondMax', 'log_EmissionHeight', 'av_dist', 'av_cross', 'MWR', 'MLR', 'MSCW', 'MSCL', 'log_EmissionHeightChi2', 'log_DispDiff']
+    features['features_5'] = [
+        'img2_ang',
+        'log_SizeSecondMax',
+        'log_EmissionHeight',
+        'av_dist',
+        'av_cross',
+        'MWR',
+        'MLR',
+        'MSCW',
+        'MSCL',
+        'log_EmissionHeightChi2',
+        'log_DispDiff'
+    ]
     features['features_6'] = features['features_5'] + ['MSWOL']
     features['features_7'] = features['features_6'] + ['MWOL']
     features['features_8'] = features['All'] + ['MSWOL'] + ['MWOL']

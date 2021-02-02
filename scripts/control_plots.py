@@ -12,7 +12,10 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    dl2_file_name = '/lustre/fs21/group/cta/users/maierg/analysis/AnalysisData/uploadDL2/Paranal_20deg/gamma_onSource.S.3HB9-FD_ID0.eff-0.root'
+    dl2_file_name = (
+        '/lustre/fs21/group/cta/users/maierg/analysis/AnalysisData/uploadDL2/'
+        'Paranal_20deg/gamma_onSource.S.3HB9-FD_ID0.eff-0.root'
+    )
     dtf = event_types.extract_df_from_dl2(dl2_file_name)
     dtf_e = event_types.bin_data_in_energy(dtf)
 
