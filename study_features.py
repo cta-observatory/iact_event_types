@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
 import copy
-import event_classes
+from event_types import event_types
 
 if __name__ == '__main__':
 
@@ -16,14 +16,14 @@ if __name__ == '__main__':
 
     # dl2_file_name = '/lustre/fs21/group/cta/users/maierg/analysis/AnalysisData/uploadDL2/Paranal_20deg/gamma_cone.S.3HB9-FD_ID0.eff-0.root'
     dl2_file_name = '/lustre/fs21/group/cta/users/maierg/analysis/AnalysisData/uploadDL2/Paranal_20deg/gamma_onSource.S.3HB9-FD_ID0.eff-0.root'
-    dtf = event_classes.extract_df_from_dl2(dl2_file_name)
-    dtf_e = event_classes.bin_data_in_energy(dtf)
+    dtf = event_types.extract_df_from_dl2(dl2_file_name)
+    dtf_e = event_types.bin_data_in_energy(dtf)
 
-    dtf_e_train, dtf_e_test = event_classes.split_data_train_test(dtf_e)
+    dtf_e_train, dtf_e_test = event_types.split_data_train_test(dtf_e)
 
-    labels, train_features = event_classes.nominal_labels_train_features()
+    labels, train_features = event_types.nominal_labels_train_features()
 
-    all_models = event_classes.define_regressors()
+    all_models = event_types.define_regressors()
 
     # vars_to_remove = train_features
 
@@ -51,9 +51,9 @@ if __name__ == '__main__':
         models_to_train[features_name]['labels'] = labels
         models_to_train[features_name]['model'] = all_models['MLP_small']
 
-    trained_models = event_classes.train_models(
+    trained_models = event_types.train_models(
         dtf_e_train,
         models_to_train
     )
-    event_classes.save_models(trained_models)
-    event_classes.save_test_dtf(dtf_e_test)
+    event_types.save_models(trained_models)
+    event_types.save_test_dtf(dtf_e_test)
