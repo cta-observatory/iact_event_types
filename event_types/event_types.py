@@ -169,6 +169,8 @@ def branches_to_read():
         'ES',
         'MWR',
         'MLR',
+        'asym',
+        'tgrad_x',
     ]
 
     return branches
@@ -214,6 +216,8 @@ def nominal_labels_train_features():
         'MWR',
         'MLR',
         'MSWOL',
+        'av_asym',
+        'av_tgrad_x',
     ]
 
     return labels, train_features
@@ -241,10 +245,7 @@ def extract_df_from_dl2(root_filename):
     branches = branches_to_read()
 
     particle_file = uproot.open(root_filename)
-    data = particle_file['data']
     cuts = particle_file['fEventTreeCuts']
-
-    data_arrays = data.arrays(expressions=branches, library='np')
     cuts_arrays = cuts.arrays(expressions='CutClass', library='np')
 
     # Cut 1: Events surviving gamma/hadron separation and direction cuts:
@@ -253,87 +254,103 @@ def extract_df_from_dl2(root_filename):
     # Cut 2: Events surviving gamma/hadron separation cut and not direction cut:
     mask_gamma_like_no_direction = cuts_arrays['CutClass'] == 0
 
-    gamma_like_events = np.logical_or(mask_gamma_like_and_direction, mask_gamma_like_no_direction)
-
-    # Variables for training:
-    mc_alt = (90 - data_arrays['MCze'][gamma_like_events]) * u.deg
-    mc_az = (data_arrays['MCaz'][gamma_like_events]) * u.deg
-    reco_alt = (90 - data_arrays['Ze'][gamma_like_events]) * u.deg
-    reco_az = (data_arrays['Az'][gamma_like_events]) * u.deg
-    # Angular separation bewteen the true vs reconstructed direction
-    ang_diff = angular_separation(
-        mc_az,  # az
-        mc_alt,  # alt
-        reco_az,
-        reco_alt,
+    gamma_like_events_all = np.logical_or(
+        mask_gamma_like_and_direction,
+        mask_gamma_like_no_direction
     )
 
-    # Variables for training:
-    av_size = [np.average(sizes) for sizes in data_arrays['size'][gamma_like_events]]
-    reco_energy = data_arrays['ErecS'][gamma_like_events]
-    NTels_reco = data_arrays['NImages'][gamma_like_events]
-    x_cores = data_arrays['Xcore'][gamma_like_events]
-    y_cores = data_arrays['Ycore'][gamma_like_events]
-    array_distance = np.sqrt(x_cores**2. + y_cores**2.)
-    x_off = data_arrays['Xoff'][gamma_like_events]
-    y_off = data_arrays['Yoff'][gamma_like_events]
-    camera_offset = np.sqrt(x_off**2. + y_off**2.)
-    img2_ang = data_arrays['img2_ang'][gamma_like_events]
-    EChi2S = data_arrays['EChi2S'][gamma_like_events]
-    SizeSecondMax = data_arrays['SizeSecondMax'][gamma_like_events]
-    NTelPairs = data_arrays['NTelPairs'][gamma_like_events]
-    MSCW = data_arrays['MSCW'][gamma_like_events]
-    MSCL = data_arrays['MSCL'][gamma_like_events]
-    EmissionHeight = data_arrays['EmissionHeight'][gamma_like_events]
-    EmissionHeightChi2 = data_arrays['EmissionHeightChi2'][gamma_like_events]
-    dist = data_arrays['dist'][gamma_like_events]
-    av_dist = [np.average(dists) for dists in dist]
-    DispDiff = data_arrays['DispDiff'][gamma_like_events]
-    dESabs = data_arrays['dESabs'][gamma_like_events]
-    loss_sum = [np.sum(losses) for losses in data_arrays['loss'][gamma_like_events]]
-    NTrig = data_arrays['NTrig'][gamma_like_events]
-    meanPedvar_Image = data_arrays['meanPedvar_Image'][gamma_like_events]
-    av_fui = [np.average(fui) for fui in data_arrays['fui'][gamma_like_events]]
-    av_cross = [np.average(cross) for cross in data_arrays['cross'][gamma_like_events]]
-    av_crossO = [np.average(crossO) for crossO in data_arrays['crossO'][gamma_like_events]]
-    av_R = [np.average(R) for R in data_arrays['R'][gamma_like_events]]
-    av_ES = [np.average(ES) for ES in data_arrays['ES'][gamma_like_events]]
-    MWR = data_arrays['MWR'][gamma_like_events]
-    MLR = data_arrays['MLR'][gamma_like_events]
+    step_size = 5000  # slightly optimized on my laptop
+    data_dict = defaultdict(list)
 
-    # Build astropy table:
-    t = Table()
-    t['log_ang_diff'] = np.log10(ang_diff.value)
-    t['log_av_size'] = np.log10(av_size)
-    t['log_reco_energy'] = np.log10(reco_energy)
-    t['log_NTels_reco'] = np.log10(NTels_reco)
-    t['array_distance'] = array_distance
-    t['img2_ang'] = img2_ang
-    t['log_EChi2S'] = np.log10(EChi2S)
-    t['log_SizeSecondMax'] = np.log10(SizeSecondMax)
-    t['camera_offset'] = camera_offset
-    t['log_NTelPairs'] = np.log10(NTelPairs)
-    t['MSCW'] = MSCW
-    t['MSCL'] = MSCL
-    t['log_EmissionHeight'] = np.log10(EmissionHeight)
-    t['log_EmissionHeightChi2'] = np.log10(EmissionHeightChi2)
-    t['av_dist'] = av_dist
-    t['log_DispDiff'] = np.log10(DispDiff)
-    t['log_dESabs'] = np.log10(dESabs)
-    t['loss_sum'] = loss_sum
-    t['NTrig'] = NTrig
-    t['meanPedvar_Image'] = meanPedvar_Image
-    t['av_fui'] = av_fui
-    t['av_cross'] = av_cross
-    t['av_crossO'] = av_crossO
-    t['av_R'] = av_R
-    t['av_ES'] = av_ES
-    t['MWR'] = MWR
-    t['MLR'] = MLR
-    t['MSWOL'] = MSCW/MSCL
-    t['MWOL'] = MWR/MLR
+    for i_event, data_arrays in enumerate(uproot.iterate(
+        '{}:data'.format(root_filename),
+        step_size=step_size,
+        expressions=branches,
+        library='np')
+    ):
 
-    return t.to_pandas()
+        gamma_like_events = gamma_like_events_all[i_event * step_size:(i_event + 1) * step_size]
+        # Variables for training:
+        mc_alt = (90 - data_arrays['MCze'][gamma_like_events]) * u.deg
+        mc_az = (data_arrays['MCaz'][gamma_like_events]) * u.deg
+        reco_alt = (90 - data_arrays['Ze'][gamma_like_events]) * u.deg
+        reco_az = (data_arrays['Az'][gamma_like_events]) * u.deg
+        # Angular separation bewteen the true vs reconstructed direction
+        ang_diff = angular_separation(
+            mc_az,  # az
+            mc_alt,  # alt
+            reco_az,
+            reco_alt,
+        )
+
+        # Variables for training:
+        av_size = [np.average(sizes) for sizes in data_arrays['size'][gamma_like_events]]
+        reco_energy = data_arrays['ErecS'][gamma_like_events]
+        NTels_reco = data_arrays['NImages'][gamma_like_events]
+        x_cores = data_arrays['Xcore'][gamma_like_events]
+        y_cores = data_arrays['Ycore'][gamma_like_events]
+        array_distance = np.sqrt(x_cores**2. + y_cores**2.)
+        x_off = data_arrays['Xoff'][gamma_like_events]
+        y_off = data_arrays['Yoff'][gamma_like_events]
+        camera_offset = np.sqrt(x_off**2. + y_off**2.)
+        img2_ang = data_arrays['img2_ang'][gamma_like_events]
+        EChi2S = data_arrays['EChi2S'][gamma_like_events]
+        SizeSecondMax = data_arrays['SizeSecondMax'][gamma_like_events]
+        NTelPairs = data_arrays['NTelPairs'][gamma_like_events]
+        MSCW = data_arrays['MSCW'][gamma_like_events]
+        MSCL = data_arrays['MSCL'][gamma_like_events]
+        EmissionHeight = data_arrays['EmissionHeight'][gamma_like_events]
+        EmissionHeightChi2 = data_arrays['EmissionHeightChi2'][gamma_like_events]
+        dist = data_arrays['dist'][gamma_like_events]
+        av_dist = [np.average(dists) for dists in dist]
+        DispDiff = data_arrays['DispDiff'][gamma_like_events]
+        dESabs = data_arrays['dESabs'][gamma_like_events]
+        loss_sum = [np.sum(losses) for losses in data_arrays['loss'][gamma_like_events]]
+        NTrig = data_arrays['NTrig'][gamma_like_events]
+        meanPedvar_Image = data_arrays['meanPedvar_Image'][gamma_like_events]
+        av_fui = [np.average(fui) for fui in data_arrays['fui'][gamma_like_events]]
+        av_cross = [np.average(cross) for cross in data_arrays['cross'][gamma_like_events]]
+        av_crossO = [np.average(crossO) for crossO in data_arrays['crossO'][gamma_like_events]]
+        av_R = [np.average(R) for R in data_arrays['R'][gamma_like_events]]
+        av_ES = [np.average(ES) for ES in data_arrays['ES'][gamma_like_events]]
+        MWR = data_arrays['MWR'][gamma_like_events]
+        MLR = data_arrays['MLR'][gamma_like_events]
+        av_asym = [np.average(asym) for asym in data_arrays['asym'][gamma_like_events]]
+        av_tgrad_x = [np.average(tgrad_x) for tgrad_x in data_arrays['tgrad_x'][gamma_like_events]]
+
+        data_dict['log_ang_diff'].extend(tuple(np.log10(ang_diff.value)))
+        data_dict['log_av_size'].extend(tuple(np.log10(av_size)))
+        data_dict['log_reco_energy'].extend(tuple(np.log10(reco_energy)))
+        data_dict['log_NTels_reco'].extend(tuple(np.log10(NTels_reco)))
+        data_dict['array_distance'].extend(tuple(array_distance))
+        data_dict['img2_ang'].extend(tuple(img2_ang))
+        data_dict['log_EChi2S'].extend(tuple(np.log10(EChi2S)))
+        data_dict['log_SizeSecondMax'].extend(tuple(np.log10(SizeSecondMax)))
+        data_dict['camera_offset'].extend(tuple(camera_offset))
+        data_dict['log_NTelPairs'].extend(tuple(np.log10(NTelPairs)))
+        data_dict['MSCW'].extend(tuple(MSCW))
+        data_dict['MSCL'].extend(tuple(MSCL))
+        data_dict['log_EmissionHeight'].extend(tuple(np.log10(EmissionHeight)))
+        data_dict['log_EmissionHeightChi2'].extend(tuple(np.log10(EmissionHeightChi2)))
+        data_dict['av_dist'].extend(tuple(av_dist))
+        data_dict['log_DispDiff'].extend(tuple(np.log10(DispDiff)))
+        data_dict['log_dESabs'].extend(tuple(np.log10(dESabs)))
+        data_dict['loss_sum'].extend(tuple(loss_sum))
+        data_dict['NTrig'].extend(tuple(NTrig))
+        data_dict['meanPedvar_Image'].extend(tuple(meanPedvar_Image))
+        data_dict['av_fui'].extend(tuple(av_fui))
+        data_dict['av_cross'].extend(tuple(av_cross))
+        data_dict['av_crossO'].extend(tuple(av_crossO))
+        data_dict['av_R'].extend(tuple(av_R))
+        data_dict['av_ES'].extend(tuple(av_ES))
+        data_dict['MWR'].extend(tuple(MWR))
+        data_dict['MLR'].extend(tuple(MLR))
+        data_dict['MSWOL'].extend(tuple(MSCW/MSCL))
+        data_dict['MWOL'].extend(tuple(MWR/MLR))
+        data_dict['av_asym'].extend(tuple(av_asym))
+        data_dict['av_tgrad_x'].extend(tuple(av_tgrad_x))
+
+    return pd.DataFrame(data=data_dict)
 
 
 def bin_data_in_energy(dtf, n_bins=20):

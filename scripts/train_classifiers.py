@@ -16,9 +16,15 @@ if __name__ == '__main__':
 
     n_types = 2
 
+    # dl2_file_name = (
+    #     '/lustre/fs21/group/cta/users/maierg/analysis/AnalysisData/uploadDL2/'
+    #     'Paranal_20deg/gamma_onSource.S.3HB9-FD_ID0.eff-0.root'
+    # )
     dl2_file_name = (
-        '/lustre/fs21/group/cta/users/maierg/analysis/AnalysisData/uploadDL2/'
-        'Paranal_20deg/gamma_onSource.S.3HB9-FD_ID0.eff-0.root'
+        '/lustre/fs22/group/cta/users/maierg/analysis/AnalysisData/'
+        'prod5-Paranal-20deg-sq08-LL/EffectiveAreas/'
+        'EffectiveArea-50h-ID0-NIM2LST2MST2SST2SCMST2-g20210921-V3/BDT.DL2.50h-V3.g20210921/'
+        'gamma_onSource.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0.root'
     )
     dtf = event_types.extract_df_from_dl2(dl2_file_name)
     dtf_e = event_types.bin_data_in_energy(dtf)
@@ -31,12 +37,12 @@ if __name__ == '__main__':
     all_models = event_types.define_classifiers()
     selected_models = [
         'MLP_classifier',
-        'MLP_relu_classifier',
+        # 'MLP_relu_classifier',
         'MLP_logistic_classifier',
         'MLP_uniform_classifier',
         'MLP_small_classifier',
         'BDT_classifier',
-        'random_forest_classifier',
+        # 'random_forest_classifier',
         'ridge_classifier',
         # # 'ridgeCV_classifier', # unnecessary, same as the ridge classifier
         # 'SVC_classifier',  # Fails to evaluate for some reason, all SVC based fail
@@ -45,7 +51,7 @@ if __name__ == '__main__':
         # 'bagging_svc_classifier',  # Fails to evaluate for some reason, all SVC based fail
         'bagging_dt_classifier',
         # 'oneVsRest_classifier',  # Fails to evaluate for some reason
-        'gradient_boosting_classifier',
+        # 'gradient_boosting_classifier',
     ]
 
     models_to_train = dict()

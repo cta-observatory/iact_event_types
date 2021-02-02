@@ -14,9 +14,17 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    # Prod3b
+    # dl2_file_name = (
+    #     '/lustre/fs21/group/cta/users/maierg/analysis/AnalysisData/uploadDL2/'
+    #     'Paranal_20deg/gamma_onSource.S.3HB9-FD_ID0.eff-0.root'
+    # )
+    # Prod5
     dl2_file_name = (
-        '/lustre/fs21/group/cta/users/maierg/analysis/AnalysisData/uploadDL2/'
-        'Paranal_20deg/gamma_onSource.S.3HB9-FD_ID0.eff-0.root'
+        '/lustre/fs22/group/cta/users/maierg/analysis/AnalysisData/'
+        'prod5-Paranal-20deg-sq08-LL/EffectiveAreas/'
+        'EffectiveArea-50h-ID0-NIM2LST2MST2SST2SCMST2-g20210921-V3/BDT.DL2.50h-V3.g20210921/'
+        'gamma_onSource.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0.root'
     )
     dtf = event_types.extract_df_from_dl2(dl2_file_name)
     dtf_e = event_types.bin_data_in_energy(dtf)
@@ -27,36 +35,17 @@ if __name__ == '__main__':
 
     all_models = event_types.define_regressors()
 
-    # vars_to_remove = train_features
-
     models_to_train = dict()
-    # for this_var in vars_to_remove:
-    #     _vars = copy.copy(train_features)
-    #     _vars.remove(this_var)
-    #     model_name = 'MLP_{}'.format(this_var)
-    #     models_to_train[model_name] = dict()
-    #     models_to_train[model_name]['train_features'] = _vars
-    #     models_to_train[model_name]['labels'] = labels
-    #     models_to_train[model_name]['model'] = all_models['MLP_small']
 
     features = dict()
     features['All'] = train_features
-    features['features_5'] = [
-        'img2_ang',
-        'log_SizeSecondMax',
-        'log_EmissionHeight',
-        'av_dist',
-        'av_cross',
-        'MWR',
-        'MLR',
-        'MSCW',
-        'MSCL',
-        'log_EmissionHeightChi2',
-        'log_DispDiff'
-    ]
-    features['features_6'] = features['features_5'] + ['MSWOL']
-    features['features_7'] = features['features_6'] + ['MWOL']
-    features['features_8'] = features['All'] + ['MSWOL'] + ['MWOL']
+    features['no_asym'] = copy.copy(train_features)
+    features['no_asym'].remove('av_asym')
+    features['no_tgrad_x'] = copy.copy(train_features)
+    features['no_tgrad_x'].remove('av_tgrad_x')
+    features['no_asym_tgrad_x'] = copy.copy(train_features)
+    features['no_asym_tgrad_x'].remove('av_asym')
+    features['no_asym_tgrad_x'].remove('av_tgrad_x')
 
     for features_name, these_features in features.items():
         print(features_name, these_features)
