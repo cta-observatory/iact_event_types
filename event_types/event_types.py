@@ -15,12 +15,29 @@ from pathlib import Path
 from joblib import dump, load
 from sklearn.metrics import confusion_matrix, f1_score
 from scipy.stats import mstats
-from sklearn.tree import DecisionTreeRegressor
-from sklearn.linear_model import LinearRegression, Ridge, SGDRegressor
-from sklearn.ensemble import RandomForestRegressor, AdaBoostRegressor
-from sklearn.neural_network import MLPRegressor
-from sklearn.svm import SVR, LinearSVR
-from sklearn import model_selection, preprocessing, feature_selection, ensemble, metrics
+from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
+from sklearn.linear_model import (
+    LinearRegression,
+    Ridge,
+    RidgeClassifier,
+    RidgeClassifierCV,
+    SGDClassifier,
+    SGDRegressor,
+)
+from sklearn.ensemble import (
+    AdaBoostClassifier,
+    AdaBoostRegressor,
+    BaggingClassifier,
+    GradientBoostingClassifier,
+    RandomForestClassifier,
+    RandomForestRegressor,
+)
+from sklearn.neural_network import MLPRegressor, MLPClassifier
+from sklearn.svm import SVR, LinearSVR, SVC
+from sklearn.gaussian_process import GaussianProcessClassifier
+from sklearn.gaussian_process.kernels import RBF
+from sklearn.multiclass import OneVsRestClassifier
+from sklearn import model_selection, preprocessing, feature_selection, metrics
 from sklearn.pipeline import make_pipeline
 
 
@@ -218,7 +235,7 @@ def extract_df_from_dl2(root_filename):
 
     Returns
     -------
-    A pandas DataFrame with variables to use in the regression, after cuts.
+    A pandas DataFrame with variables to use in the regression/classification, after cuts.
     '''
 
     branches = branches_to_read()
@@ -238,7 +255,7 @@ def extract_df_from_dl2(root_filename):
 
     gamma_like_events = np.logical_or(mask_gamma_like_and_direction, mask_gamma_like_no_direction)
 
-    # Variables for regression:
+    # Variables for training:
     mc_alt = (90 - data_arrays['MCze'][gamma_like_events]) * u.deg
     mc_az = (data_arrays['MCaz'][gamma_like_events]) * u.deg
     reco_alt = (90 - data_arrays['Ze'][gamma_like_events]) * u.deg
@@ -574,9 +591,127 @@ def define_regressors():
     return regressors
 
 
-def train_models(dtf_e_train, regressors):
+def define_classifiers():
     '''
-    Train all the models in regressors, using the data in dtf_e_train.
+    Define classifiers to train the data with.
+    All possible classifiers should be added here.
+    Classifiers can be simple ones or pipelines that include standardisation or anything else.
+    The parameters for the classifiers are hard coded since they are expected to more or less
+    stay constant once tuned.
+    TODO: Include a feature selection method in the pipeline?
+          That way it can be done automatically separately in each energy bin.
+          (see https://scikit-learn.org/stable/modules/feature_selection.html).
+
+    Returns
+    -------
+    A dictionary of classifiers to train.
+    '''
+
+    classifiers = dict()
+
+    classifiers['random_forest_classifier'] = RandomForestClassifier(
+        n_estimators=100,
+        random_state=0,
+        n_jobs=8
+    )
+    classifiers['MLP_classifier'] = make_pipeline(
+        preprocessing.QuantileTransformer(output_distribution='normal', random_state=0),
+        MLPClassifier(
+            hidden_layer_sizes=(80, 45),
+            solver='adam',
+            max_iter=20000,
+            activation='tanh',
+            tol=1e-5,
+            # early_stopping=True,
+            random_state=0
+        )
+    )
+    classifiers['MLP_relu_classifier'] = make_pipeline(
+        preprocessing.QuantileTransformer(output_distribution='normal', random_state=0),
+        MLPClassifier(
+            hidden_layer_sizes=(100, 50),
+            solver='adam',
+            max_iter=20000,
+            activation='relu',
+            tol=1e-5,
+            # early_stopping=True,
+            random_state=0
+        )
+    )
+    classifiers['MLP_logistic_classifier'] = make_pipeline(
+        preprocessing.QuantileTransformer(output_distribution='normal', random_state=0),
+        MLPClassifier(
+            hidden_layer_sizes=(80, 45),
+            solver='adam',
+            max_iter=20000,
+            activation='logistic',
+            tol=1e-5,
+            # early_stopping=True,
+            random_state=0
+        )
+    )
+    classifiers['MLP_uniform_classifier'] = make_pipeline(
+        preprocessing.QuantileTransformer(output_distribution='uniform', random_state=0),
+        MLPClassifier(
+            hidden_layer_sizes=(80, 45),
+            solver='adam',
+            max_iter=20000,
+            activation='tanh',
+            tol=1e-5,
+            # early_stopping=True,
+            random_state=0
+        )
+    )
+    classifiers['MLP_small_classifier'] = make_pipeline(
+        preprocessing.QuantileTransformer(output_distribution='normal', random_state=0),
+        MLPClassifier(
+            hidden_layer_sizes=(36, 6),
+            solver='adam',
+            max_iter=20000,
+            activation='tanh',
+            tol=1e-5,
+            # early_stopping=True,
+            random_state=0
+        )
+    )
+    classifiers['BDT_classifier'] = AdaBoostClassifier(
+        n_estimators=100, random_state=0
+    )
+    classifiers['ridge_classifier'] = RidgeClassifier()
+    classifiers['ridgeCV_classifier'] = RidgeClassifierCV(
+        alphas=[1e-3, 1e-2, 1e-1, 1],
+        normalize=True
+    )
+    classifiers['SVC_classifier'] = SVC(gamma=2, C=1)
+    classifiers['SGD_classifier'] = make_pipeline(
+        preprocessing.StandardScaler(),
+        SGDClassifier(loss='epsilon_insensitive', max_iter=20000, tol=1e-5)
+    )
+    classifiers['Gaussian_process_classifier'] = GaussianProcessClassifier(1.0 * RBF(1.0))
+    classifiers['bagging_svc_classifier'] = BaggingClassifier(
+        base_estimator=SVC(),
+        n_estimators=100,
+        random_state=0
+    )
+    classifiers['bagging_dt_classifier'] = BaggingClassifier(
+        base_estimator=DecisionTreeClassifier(random_state=0),
+        n_estimators=100,
+        random_state=0
+    )
+    classifiers['oneVsRest_classifier'] = OneVsRestClassifier(SVC(), n_jobs=8)
+    classifiers['gradient_boosting_classifier'] = GradientBoostingClassifier(
+        n_estimators=100,
+        learning_rate=0.1,
+        max_depth=5,
+        random_state=0
+    )
+
+    return classifiers
+
+
+def train_models(dtf_e_train, models_to_train):
+    '''
+    Train all the models in models, using the data in dtf_e_train.
     The models are trained per energy range in dtf_e_train.
 
     Parameters
@@ -585,11 +720,11 @@ def train_models(dtf_e_train, regressors):
         Each entry in the dict is a DataFrame containing the data to train with.
         The keys of the dict are the energy ranges of the data.
         Each DataFrame is assumed to contain all 'train_features' and 'labels'.
-    regressors: a nested dict of regressors:
+    models: a nested dict of models:
         1st dict:
             keys=model names, values=2nd dict
         2nd dict:
-            'model':dict of sklearn regressors (as returned from define_regressors());
+            'model':dict of sklearn models (as returned from define_regressors/classifiers()).
             'train_features': list of variable names to train with.
             'labels': Name of the variable used as the labels in the training.
 
@@ -602,25 +737,25 @@ def train_models(dtf_e_train, regressors):
         2nd dict:
             keys=energy ranges, values 3rd dict
         3rd dict:
-            'model': traine model for this energy range
+            'model': trained model for this energy range
             'train_features': list of variable names to train with.
             'labels': Name of the variable used as the labels in the training.
     '''
 
     models = dict()
-    for this_model, this_regressor in regressors.items():
-        models[this_model] = dict()
+    for this_model_name, this_model in models_to_train.items():
+        models[this_model_name] = dict()
         for this_e_range in dtf_e_train.keys():
 
-            print('Training {} in the energy range - {}'.format(this_model, this_e_range))
-            X_train = dtf_e_train[this_e_range][this_regressor['train_features']].values
-            y_train = dtf_e_train[this_e_range][this_regressor['labels']].values
+            print('Training {} in the energy range - {}'.format(this_model_name, this_e_range))
+            X_train = dtf_e_train[this_e_range][this_model['train_features']].values
+            y_train = dtf_e_train[this_e_range][this_model['labels']].values
 
-            models[this_model][this_e_range] = dict()
-            models[this_model][this_e_range]['train_features'] = this_regressor['train_features']
-            models[this_model][this_e_range]['labels'] = this_regressor['labels']
-            models[this_model][this_e_range]['model'] = copy.deepcopy(
-                this_regressor['model'].fit(X_train, y_train)
+            models[this_model_name][this_e_range] = dict()
+            models[this_model_name][this_e_range]['train_features'] = this_model['train_features']
+            models[this_model_name][this_e_range]['labels'] = this_model['labels']
+            models[this_model_name][this_e_range]['model'] = copy.deepcopy(
+                this_model['model'].fit(X_train, y_train)
             )
 
     return models
@@ -629,12 +764,12 @@ def train_models(dtf_e_train, regressors):
 def save_models(trained_models):
     '''
     Save the trained models to disk.
-    The path for the models is in models/'regressor name'.
-    All models are saved per energy range for each regressor in trained_models.
+    The path for the models is in models/'model name'.
+    All models are saved per energy range for each model in trained_models.
 
     Parameters
     ----------
-    trained_models: a nested dict of trained sklearn regressor per energy range.
+    trained_models: a nested dict of trained sklearn model per energy range.
         1st dict:
             keys=model names, values=2nd dict
         2nd dict:
@@ -645,22 +780,22 @@ def save_models(trained_models):
             'labels': Name of the variable used as the labels in the training.
     '''
 
-    for regressor_name, this_regressor in trained_models.items():
-        this_dir = Path('models').joinpath(regressor_name).mkdir(parents=True, exist_ok=True)
-        for this_e_range, this_model in this_regressor.items():
+    for model_name, this_model in trained_models.items():
+        this_dir = Path('models').joinpath(model_name).mkdir(parents=True, exist_ok=True)
+        for this_e_range, model_now in this_model.items():
 
             e_range_name = this_e_range.replace(' < ', '-').replace(' ', '_')
 
             model_file_name = Path('models').joinpath(
-                regressor_name,
+                model_name,
                 '{}.joblib'.format(e_range_name)
             )
-            dump(this_model, model_file_name, compress=3)
+            dump(model_now, model_file_name, compress=3)
 
     return
 
 
-def save_test_dtf(dtf_e_test):
+def save_test_dtf(dtf_e_test, suffix=''):
     '''
     Save the test data to disk so it can be loaded together with load_models().
     The path for the test data is in models/test_data.
@@ -671,20 +806,33 @@ def save_test_dtf(dtf_e_test):
         Each entry in the dict is a DataFrame containing the data to test with.
         The keys of the dict are the energy ranges of the data.
         Each DataFrame is assumed to contain all 'train_features' and 'labels'.
+    suffix: str
+        The suffix to add to the file name
     '''
 
     this_dir = Path('models').joinpath('test_data').mkdir(parents=True, exist_ok=True)
 
-    test_data_file_name = Path('models').joinpath('test_data').joinpath('dtf_e_test.joblib')
+    if suffix != '':
+        if not suffix.startswith('_'):
+            suffix = '_{}'.format(suffix)
+
+    test_data_file_name = Path('models').joinpath('test_data').joinpath(
+        'dtf_e_test{}.joblib'.format(suffix)
+    )
     dump(dtf_e_test, test_data_file_name, compress=3)
 
     return
 
 
-def load_test_dtf():
+def load_test_dtf(suffix=''):
     '''
     Load the test data together with load_models().
     The path for the test data is in models/test_data.
+
+    Parameters
+    ----------
+    suffix: str
+        The suffix added to the file name (the nominal is dtf_e_test.joblib)
 
     Returns
     -------
@@ -694,25 +842,31 @@ def load_test_dtf():
         Each DataFrame is assumed to contain all 'train_features' and 'labels'.
     '''
 
-    test_data_file_name = Path('models').joinpath('test_data').joinpath('dtf_e_test.joblib')
+    if suffix != '':
+        if not suffix.startswith('_'):
+            suffix = '_{}'.format(suffix)
+
+    test_data_file_name = Path('models').joinpath('test_data').joinpath(
+        'dtf_e_test{}.joblib'.format(suffix)
+    )
 
     return load(test_data_file_name)
 
 
-def load_models(regressor_names=list()):
+def load_models(model_names=list()):
     '''
     Read the trained models from disk.
-    The path for the models is in models/'regressor name'.
-    All models are saved per energy range for each regressor in trained_models.
+    The path for the models is in models/'model name'.
+    All models are saved per energy range for each model in trained_models.
 
     Parameters
     ----------
-    regressor_names: list of str
-        A list of regressor names to load from disk
+    model_names: list of str
+        A list of model names to load from disk
 
     Returns
     -------
-    trained_models: a nested dict of trained sklearn regressor per energy range.
+    trained_models: a nested dict of trained sklearn model per energy range.
         1st dict:
             keys=model names, values=2nd dict
         2nd dict:
@@ -725,17 +879,17 @@ def load_models(regressor_names=list()):
 
     trained_models = defaultdict(dict)
 
-    for regressor_name in regressor_names:
-        models_dir = Path('models').joinpath(regressor_name)
+    for model_name in model_names:
+        models_dir = Path('models').joinpath(model_name)
         for this_file in sorted(models_dir.iterdir(), key=os.path.getmtime):
 
             e_range_name = this_file.stem.replace('-', ' < ').replace('_', ' ')
 
             model_file_name = Path('models').joinpath(
-                regressor_name,
+                model_name,
                 '{}.joblib'.format(e_range_name)
             )
-            trained_models[regressor_name][e_range_name] = load(this_file)
+            trained_models[model_name][e_range_name] = load(this_file)
 
     return trained_models
 
@@ -743,7 +897,7 @@ def load_models(regressor_names=list()):
 def partition_event_types(dtf_e_test, trained_models, n_types=2):
     '''
     Divide the events into n_types event types.
-    The bins defining the types are calculated from the true label values.
+    The bins defining the types are calculated from the predicted label values.
     Two lists of types are returned per model and per energy range, one true and one predicted.
 
     Parameters
@@ -752,7 +906,7 @@ def partition_event_types(dtf_e_test, trained_models, n_types=2):
         Each entry in the dict is a DataFrame containing the data to test with.
         The keys of the dict are the energy ranges of the data.
         Each DataFrame is assumed to contain all 'train_features' and 'labels'.
-    trained_models: a nested dict of trained sklearn regressor per energy range.
+    trained_models: a nested dict of trained sklearn model per energy range.
             1st dict:
                 keys=model names, values=2nd dict
             2nd dict:
@@ -786,21 +940,13 @@ def partition_event_types(dtf_e_test, trained_models, n_types=2):
             event_types[model_name][this_e_range] = defaultdict(list)
             event_types[model_name][this_e_range] = defaultdict(list)
 
-            event_types_bins = mstats.mquantiles(
-                dtf_e_test[this_e_range][this_model['labels']].values,
-                np.linspace(0, 1, n_types + 1)
-            )
-
-            for this_value in dtf_e_test[this_e_range][this_model['labels']].values:
-                this_event_type = np.searchsorted(event_types_bins, this_value)
-                if this_event_type < 1:
-                    this_event_type = 1
-                if this_event_type > n_types:
-                    this_event_type = n_types
-                event_types[model_name][this_e_range]['true'].append(this_event_type)
-
             X_test = dtf_e_test[this_e_range][this_model['train_features']].values
             y_pred = this_model['model'].predict(X_test)
+
+            event_types_bins = mstats.mquantiles(
+                y_pred,
+                np.linspace(0, 1, n_types + 1)
+            )
 
             for this_value in y_pred:
                 this_event_type = np.searchsorted(event_types_bins, this_value)
@@ -810,7 +956,124 @@ def partition_event_types(dtf_e_test, trained_models, n_types=2):
                     this_event_type = n_types
                 event_types[model_name][this_e_range]['reco'].append(this_event_type)
 
+            for this_value in dtf_e_test[this_e_range][this_model['labels']].values:
+                this_event_type = np.searchsorted(event_types_bins, this_value)
+                if this_event_type < 1:
+                    this_event_type = 1
+                if this_event_type > n_types:
+                    this_event_type = n_types
+                event_types[model_name][this_e_range]['true'].append(this_event_type)
+
     return event_types
+
+
+def predicted_event_types(dtf_e_test, trained_models, n_types=2):
+    '''
+    Get the true and predicted event types for n_types event types.
+    Two lists of types are returned per model and per energy range, one true and one predicted.
+    This function is meant to be used only for the classification case.
+
+    Parameters
+    ----------
+    dtf_e_test: dict of pandas DataFrames
+        Each entry in the dict is a DataFrame containing the data to test with.
+        The keys of the dict are the energy ranges of the data.
+        Each DataFrame is assumed to contain all 'train_features'
+        and a column of true event types as added from add_event_types_column().
+    trained_models: a nested dict of trained sklearn model per energy range.
+            1st dict:
+                keys=model names, values=2nd dict
+            2nd dict:
+                keys=energy ranges, values 3rd dict
+            3rd dict:
+                'model': trained model for this energy range
+                'train_features': list of variable names trained with.
+                'labels': Name of the variable used as the labels in the training.
+    n_types: int (default=2)
+            The number of types used in the training.
+
+    Returns
+    -------
+    event_types: nested dict
+        1st dict:
+            keys=model names, values=2nd dict
+        2nd dict:
+            keys=energy ranges, values=3rddict
+        3rd dict:
+            keys=true or reco, values=event type
+    '''
+
+    event_types = dict()
+
+    for model_name, model in trained_models.items():
+
+        event_types[model_name] = dict()
+
+        for this_e_range, this_model in model.items():
+
+            event_types[model_name][this_e_range] = defaultdict(list)
+            event_types[model_name][this_e_range] = defaultdict(list)
+
+            event_types[model_name][this_e_range]['true'] = dtf_e_test[this_e_range][
+                'event_type_{:d}'.format(n_types)
+            ]
+
+            X_test = dtf_e_test[this_e_range][this_model['train_features']].values
+            event_types[model_name][this_e_range]['reco'] = this_model['model'].predict(X_test)
+
+    return event_types
+
+
+def add_event_types_column(dtf_e, labels, n_types=[2, 3, 4]):
+    '''
+    Divide the events into n_types event types.
+    The bins defining the types are calculated from the label values.
+    The data will be divided to n number of types with equivalent number of events in each type.
+    A column with the type will be added to the DataFrame per entry in the n_types list.
+
+    Parameters
+    ----------
+    dtf_e: dict of pandas DataFrames
+        Each entry in the dict is a DataFrame containing the data.
+        The keys of the dict are the energy ranges of the data.
+    labels: str
+        The variable to use as a basis on which to divide the data.
+    n_types: list of ints (default=[2, 3, 4])
+        The data will be divided to n number of types
+        with equivalent number of events in each type.
+        A column with the type will be added to the DataFrame per entry in the n_types list.
+
+    Returns
+    -------
+    dtf_e: dict of pandas DataFrames
+        The same DataFrame as the input but with added columns for event types,
+        one column per n_types entry. The column names are event_type_n.
+    '''
+
+    pd.options.mode.chained_assignment = None
+
+    for this_n_type in n_types:
+
+        for this_e_range, this_dtf in dtf_e.items():
+
+            event_types = list()
+
+            event_types_bins = mstats.mquantiles(
+                this_dtf[labels].values,
+                np.linspace(0, 1, this_n_type + 1)
+            )
+
+            for this_value in this_dtf[labels].values:
+                this_event_type = np.searchsorted(event_types_bins, this_value)
+                if this_event_type < 1:
+                    this_event_type = 1
+                if this_event_type > this_n_type:
+                    this_event_type = this_n_type
+                event_types.append(this_event_type)
+
+            this_dtf.loc[:, 'event_type_{:d}'.format(this_n_type)] = event_types
+
+    return dtf_e
 
 
 def plot_pearson_correlation(dtf, title):
@@ -857,7 +1120,7 @@ def plot_test_vs_predict(dtf_e_test, trained_models, trained_model_name):
         Each entry in the dict is a DataFrame containing the data to test with.
         The keys of the dict are the energy ranges of the data.
         Each DataFrame is assumed to contain all 'train_features' and 'labels'.
-    trained_models: a nested dict of one trained sklearn regressor per energy range.
+    trained_models: a nested dict of one trained sklearn model per energy range.
         1st dict:
             keys=energy ranges, values 2nd dict
         2nd dict:
@@ -865,7 +1128,7 @@ def plot_test_vs_predict(dtf_e_test, trained_models, trained_model_name):
             'train_features': list of variable names trained with.
             'labels': Name of the variable used as the labels in the training.
     trained_model_name: str
-        Name of the regressor trained.
+        Name of the model trained.
 
     Returns
     -------
@@ -981,7 +1244,7 @@ def plot_score_comparison(dtf_e_test, trained_models):
         Each entry in the dict is a DataFrame containing the data to test with.
         The keys of the dict are the energy ranges of the data.
         Each DataFrame is assumed to contain all 'train_features' and 'labels'.
-    trained_models: a nested dict of trained sklearn regressor per energy range.
+    trained_models: a nested dict of trained sklearn model per energy range.
         1st dict:
             keys=model names, values=2nd dict
         2nd dict:
@@ -1004,9 +1267,9 @@ def plot_score_comparison(dtf_e_test, trained_models):
     rms_scores = defaultdict(list)
     energy_bins = extract_energy_bins(trained_models[next(iter(trained_models))].keys())
 
-    for this_regressor_name, trained_model in trained_models.items():
+    for this_model_name, trained_model in trained_models.items():
 
-        print('Calculating scores for {}'.format(this_regressor_name))
+        print('Calculating scores for {}'.format(this_model_name))
 
         for this_e_range, this_model in trained_model.items():
 
@@ -1015,10 +1278,10 @@ def plot_score_comparison(dtf_e_test, trained_models):
 
             y_pred = this_model['model'].predict(X_test)
 
-            scores[this_regressor_name].append(this_model['model'].score(X_test, y_test))
-            # rms_scores[this_regressor_name].append(metrics.mean_squared_error(y_test, y_pred))
+            scores[this_model_name].append(this_model['model'].score(X_test, y_test))
+            # rms_scores[this_model_name].append(metrics.mean_squared_error(y_test, y_pred))
 
-        ax.plot(energy_bins, scores[this_regressor_name], label=this_regressor_name)
+        ax.plot(energy_bins, scores[this_model_name], label=this_model_name)
 
     ax.set_xlabel('E [TeV]')
     ax.set_ylabel('score')
@@ -1041,7 +1304,7 @@ def plot_confusion_matrix(event_types, trained_model_name, n_types=2):
         2nd dict:
             keys=true or reco, values=event type
     trained_model_name: str
-        Name of the regressor used to obtained the reconstructed event types
+        Name of the model used to obtained the reconstructed event types
     n_types: int (default=2)
         The number of types the data was divided in.
 
@@ -1103,7 +1366,7 @@ def plot_1d_confusion_matrix(event_types, trained_model_name, n_types=2):
         2nd dict:
             keys=true or reco, values=event type
     trained_model_name: str
-        Name of the regressor used to obtained the reconstructed event types
+        Name of the model used to obtained the reconstructed event types
     n_types: int (default=2)
         The number of types the data was divided in.
 
@@ -1168,66 +1431,3 @@ def plot_1d_confusion_matrix(event_types, trained_model_name, n_types=2):
     plt.tight_layout()
 
     return plt
-
-
-def plot_variable_importance(trained_model, regressor_name, energy_bin, train_features):
-    '''
-    Plot the importance of the variables for the provided trained_model in the 'energy_bin'.
-
-    Parameters
-    ----------
-    trained_model: a trained sklearn regressor for one energy range
-    regressor_name: str
-        The regressor name (as defined in define_regressors())
-    energy_bin: str
-        The energy bin for this model (as defined in bin_data_in_energy())
-    train_features: list
-        List of variable names trained with.
-
-
-    Returns
-    -------
-    A pyplot instance with the importances plot.
-    '''
-
-    if hasattr(trained_model, 'feature_importances_'):
-
-        importances = trained_model.feature_importances_
-        dtf_importances = pd.DataFrame({'importance': importances, 'variable': train_features})
-        dtf_importances.sort_values('importance', ascending=False)
-        dtf_importances['cumsum'] = dtf_importances['importance'].cumsum(axis=0)
-        dtf_importances = dtf_importances.set_index('variable')
-
-        fig, ax = plt.subplots(nrows=1, ncols=2, sharex=False, sharey=False, figsize=[12, 6])
-        fig.suptitle('Features Importance for {}\n{}'.format(
-                regressor_name,
-                this_e_range
-            ),
-            fontsize=20
-        )
-        ax[0].title.set_text('variables')
-        dtf_importances[['importance']].sort_values(by='importance').plot(
-            kind='barh',
-            legend=False,
-            ax=ax[0]
-        ).grid(axis='x')
-        ax[0].set(ylabel='')
-        ax[1].title.set_text('cumulative')
-        dtf_importances[['cumsum']].plot(
-            kind='line',
-            linewidth=4,
-            legend=False,
-            ax=ax[1]
-        )
-        ax[1].set(
-            xlabel='',
-            xticks=np.arange(len(dtf_importances)),
-            xticklabels=dtf_importances.index
-        )
-        plt.xticks(rotation=70)
-        plt.grid(axis='both')
-
-        return plt
-    else:
-        print('Warning: importances cannot be calculated for the {} model'.format(regressor_name))
-        return None

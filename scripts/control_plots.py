@@ -1,6 +1,6 @@
 import argparse
 from pathlib import Path
-import event_classes
+from event_types import event_types
 
 if __name__ == '__main__':
 
@@ -12,11 +12,14 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    dl2_file_name = '/lustre/fs21/group/cta/users/maierg/analysis/AnalysisData/uploadDL2/Paranal_20deg/gamma_onSource.S.3HB9-FD_ID0.eff-0.root'
-    dtf = event_classes.extract_df_from_dl2(dl2_file_name)
-    dtf_e = event_classes.bin_data_in_energy(dtf)
+    dl2_file_name = (
+        '/lustre/fs21/group/cta/users/maierg/analysis/AnalysisData/uploadDL2/'
+        'Paranal_20deg/gamma_onSource.S.3HB9-FD_ID0.eff-0.root'
+    )
+    dtf = event_types.extract_df_from_dl2(dl2_file_name)
+    dtf_e = event_types.bin_data_in_energy(dtf)
 
-    labels, train_features = event_classes.nominal_labels_train_features()
+    labels, train_features = event_types.nominal_labels_train_features()
 
     Path('plots/matrices').mkdir(parents=True, exist_ok=True)
     Path('plots/pearson').mkdir(parents=True, exist_ok=True)
@@ -25,10 +28,10 @@ if __name__ == '__main__':
 
         e_range_name = this_e_range.replace(' < ', '-').replace(' ', '_')
 
-        plt = event_classes.plot_pearson_correlation(this_dtf, this_e_range)
+        plt = event_types.plot_pearson_correlation(this_dtf, this_e_range)
         plt.savefig('plots/pearson/pearson_{}.pdf'.format(e_range_name))
 
-        grids = event_classes.plot_matrix(
+        grids = event_types.plot_matrix(
             this_dtf,
             train_features,
             labels,

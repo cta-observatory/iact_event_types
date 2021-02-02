@@ -1,7 +1,7 @@
 import numpy as np
 import argparse
 from pathlib import Path
-import event_classes
+from event_types import event_types
 
 if __name__ == '__main__':
 
@@ -15,7 +15,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    labels, train_features = event_classes.nominal_labels_train_features()
+    labels, train_features = event_types.nominal_labels_train_features()
 
     plot_predict_dist = False
     plot_scores = False
@@ -23,7 +23,7 @@ if __name__ == '__main__':
     n_types = 4
 
     Path('plots').mkdir(parents=True, exist_ok=True)
-    dtf_e_test = event_classes.load_test_dtf()
+    dtf_e_test = event_types.load_test_dtf()
 
     # models_to_compare = [
     #     # 'linear_regression',
@@ -56,11 +56,11 @@ if __name__ == '__main__':
 
     for i_group, these_models_to_compare in enumerate(group_models_to_compare):
 
-        trained_models = event_classes.load_models(these_models_to_compare)
+        trained_models = event_types.load_models(these_models_to_compare)
 
         if plot_predict_dist:
             for this_trained_model_name, this_trained_model in trained_models.items():
-                plt = event_classes.plot_test_vs_predict(
+                plt = event_types.plot_test_vs_predict(
                     dtf_e_test,
                     this_trained_model,
                     this_trained_model_name
@@ -72,16 +72,20 @@ if __name__ == '__main__':
             plt.clf()
 
         if plot_scores:
-            plt = event_classes.plot_score_comparison(dtf_e_test, trained_models)
+            plt = event_types.plot_score_comparison(dtf_e_test, trained_models)
             plt.savefig('plots/scores_features_{}.pdf'.format(i_group + 1))
             plt.savefig('plots/scores_features_{}.png'.format(i_group + 1))
             plt.clf()
 
         if plot_confusion_matrix:
 
-            event_types = event_classes.partition_event_types(dtf_e_test, trained_models, n_types)
-            for this_trained_model_name, this_event_types in event_types.items():
-                plt = event_classes.plot_confusion_matrix(
+            event_types_lists = event_types.partition_event_types(
+                dtf_e_test,
+                trained_models,
+                n_types
+            )
+            for this_trained_model_name, this_event_types in event_types_lists.items():
+                plt = event_types.plot_confusion_matrix(
                     this_event_types,
                     this_trained_model_name,
                     n_types
@@ -96,7 +100,7 @@ if __name__ == '__main__':
                     n_types
                 ))
 
-            plt = event_classes.plot_1d_confusion_matrix(
+            plt = event_types.plot_1d_confusion_matrix(
                 this_event_types,
                 this_trained_model_name,
                 n_types
