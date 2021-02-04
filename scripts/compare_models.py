@@ -17,10 +17,10 @@ if __name__ == '__main__':
 
     labels, train_features = event_types.nominal_labels_train_features()
 
-    plot_predict_dist = False
-    plot_scores = False
+    plot_predict_dist = True
+    plot_scores = True
     plot_confusion_matrix = True
-    n_types = 4
+    n_types = 2
 
     Path('plots').mkdir(parents=True, exist_ok=True)
     dtf_e_test = event_types.load_test_dtf()
@@ -45,7 +45,7 @@ if __name__ == '__main__':
     # models_to_compare = ['MLP_{}'.format(var) for var in train_features]
     # models_to_compare = ['All', 'features_1', 'features_2', 'features_3', 'features_4']
     # models_to_compare = ['All', 'features_5', 'features_6', 'features_7', 'features_8']
-    models_to_compare = ['All']
+    models_to_compare = ['All', 'no_asym', 'no_tgrad_x', 'no_asym_tgrad_x']
     if len(models_to_compare) > 1:
         group_models_to_compare = np.array_split(
             models_to_compare,
@@ -100,19 +100,19 @@ if __name__ == '__main__':
                     n_types
                 ))
 
-            plt = event_types.plot_1d_confusion_matrix(
-                this_event_types,
-                this_trained_model_name,
-                n_types
-            )
+                plt = event_types.plot_1d_confusion_matrix(
+                    this_event_types,
+                    this_trained_model_name,
+                    n_types
+                )
 
-            plt.savefig('plots/{}_1d_confusion_matrix_n_types_{}.pdf'.format(
-                this_trained_model_name,
-                n_types
-            ))
-            plt.savefig('plots/{}_1d_confusion_matrix_n_types_{}.png'.format(
-                this_trained_model_name,
-                n_types
-            ))
+                plt.savefig('plots/{}_1d_confusion_matrix_n_types_{}.pdf'.format(
+                    this_trained_model_name,
+                    n_types
+                ))
+                plt.savefig('plots/{}_1d_confusion_matrix_n_types_{}.png'.format(
+                    this_trained_model_name,
+                    n_types
+                ))
 
-            plt.clf()
+                plt.clf()
