@@ -1,6 +1,7 @@
 import numpy as np
 import argparse
 from pathlib import Path
+from math import ceil
 from event_types import event_types
 
 if __name__ == '__main__':
@@ -20,10 +21,11 @@ if __name__ == '__main__':
     plot_predict_dist = True
     plot_scores = True
     plot_confusion_matrix = True
-    n_types = 2
+    n_types = 3
+    type_bins = list(np.linspace(0, 1, n_types + 1))
+    # type_bins = [0, 0.2, 0.8, 1]
 
     Path('plots').mkdir(parents=True, exist_ok=True)
-    dtf_e_test = event_types.load_test_dtf()
 
     # models_to_compare = [
     #     # 'linear_regression',
@@ -45,11 +47,19 @@ if __name__ == '__main__':
     # models_to_compare = ['MLP_{}'.format(var) for var in train_features]
     # models_to_compare = ['All', 'features_1', 'features_2', 'features_3', 'features_4']
     # models_to_compare = ['All', 'features_5', 'features_6', 'features_7', 'features_8']
-    models_to_compare = ['All', 'no_asym', 'no_tgrad_x', 'no_asym_tgrad_x']
+    # models_to_compare = ['All', 'no_asym', 'no_tgrad_x', 'no_asym_tgrad_x']
+    # models_to_compare = ['All']
+    models_to_compare = [
+        'test_size_55p',
+        'test_size_65p',
+        'test_size_75p',
+        'test_size_85p',
+        'test_size_95p',
+    ]
     if len(models_to_compare) > 1:
         group_models_to_compare = np.array_split(
             models_to_compare,
-            round(len(models_to_compare)/5)
+            ceil(len(models_to_compare)/5)
         )
     else:
         group_models_to_compare = [models_to_compare]
@@ -57,9 +67,12 @@ if __name__ == '__main__':
     for i_group, these_models_to_compare in enumerate(group_models_to_compare):
 
         trained_models = event_types.load_models(these_models_to_compare)
+        dataset_names = event_types.extract_unique_dataset_names(trained_models)
+        dtf_e_test = event_types.load_multi_test_dtfs(dataset_names)
 
         if plot_predict_dist:
             for this_trained_model_name, this_trained_model in trained_models.items():
+                test_dataset_name = list(this_trained_model.values())[0]['test_data_suffix']
                 plt = event_types.plot_test_vs_predict(
                     dtf_e_test,
                     this_trained_model,
@@ -82,7 +95,8 @@ if __name__ == '__main__':
             event_types_lists = event_types.partition_event_types(
                 dtf_e_test,
                 trained_models,
-                n_types
+                n_types,
+                type_bins
             )
             for this_trained_model_name, this_event_types in event_types_lists.items():
                 plt = event_types.plot_confusion_matrix(

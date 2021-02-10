@@ -8,7 +8,6 @@ from collections import defaultdict
 from astropy.coordinates.angle_utilities import angular_separation
 from astropy.coordinates import Angle
 from astropy import units as u
-from astropy.table import Table
 import pandas as pd
 import seaborn as sns
 from pathlib import Path
@@ -351,6 +350,57 @@ def extract_df_from_dl2(root_filename):
         data_dict['av_tgrad_x'].extend(tuple(av_tgrad_x))
 
     return pd.DataFrame(data=data_dict)
+
+
+def save_dtf(dtf, suffix=''):
+    '''
+    Save the test dataset to disk as it is much quicker
+    to read the reduced pickled data than the ROOT file.
+
+    Parameters
+    ----------
+    dtf: pandas DataFrames
+    suffix: str
+        The suffix to add to the file name
+    '''
+
+    this_dir = Path('reduced_data').mkdir(parents=True, exist_ok=True)
+
+    if suffix != '':
+        if not suffix.startswith('_'):
+            suffix = '_{}'.format(suffix)
+
+    data_file_name = Path('reduced_data').joinpath(
+        'dtf{}.joblib'.format(suffix)
+    )
+    dump(dtf, data_file_name, compress=3)
+
+    return
+
+
+def load_dtf(suffix=''):
+    '''
+    Load the reduced data from reduced_data/.
+
+    Parameters
+    ----------
+    suffix: str
+        The suffix added to the file name (the nominal is dtf.joblib)
+
+    Returns
+    -------
+    dtf: pandas DataFrames of the reduced data
+    '''
+
+    if suffix != '':
+        if not suffix.startswith('_'):
+            suffix = '_{}'.format(suffix)
+
+    data_file_name = Path('reduced_data').joinpath(
+        'dtf{}.joblib'.format(suffix)
+    )
+
+    return load(data_file_name)
 
 
 def bin_data_in_energy(dtf, n_bins=20):
@@ -771,6 +821,9 @@ def train_models(dtf_e_train, models_to_train):
             models[this_model_name][this_e_range] = dict()
             models[this_model_name][this_e_range]['train_features'] = this_model['train_features']
             models[this_model_name][this_e_range]['labels'] = this_model['labels']
+            models[this_model_name][this_e_range]['test_data_suffix'] = this_model[
+                'test_data_suffix'
+            ]
             models[this_model_name][this_e_range]['model'] = copy.deepcopy(
                 this_model['model'].fit(X_train, y_train)
             )
@@ -792,9 +845,10 @@ def save_models(trained_models):
         2nd dict:
             keys=energy ranges, values 3rd dict
         3rd dict:
-            'model': trained model for this energy range
+            'model': trained model for this energy range.
             'train_features': list of variable names trained with.
-            'labels': Name of the variable used as the labels in the training.
+            'labels': name of the variable used as the labels in the training.
+            'test_data_suffix': suffix of the test dataset saved to disk.
     '''
 
     for model_name, this_model in trained_models.items():
@@ -812,7 +866,7 @@ def save_models(trained_models):
     return
 
 
-def save_test_dtf(dtf_e_test, suffix=''):
+def save_test_dtf(dtf_e_test, suffix='default'):
     '''
     Save the test data to disk so it can be loaded together with load_models().
     The path for the test data is in models/test_data.
@@ -841,7 +895,7 @@ def save_test_dtf(dtf_e_test, suffix=''):
     return
 
 
-def load_test_dtf(suffix=''):
+def load_test_dtf(suffix='default'):
     '''
     Load the test data together with load_models().
     The path for the test data is in models/test_data.
@@ -849,7 +903,7 @@ def load_test_dtf(suffix=''):
     Parameters
     ----------
     suffix: str
-        The suffix added to the file name (the nominal is dtf_e_test.joblib)
+        The suffix added to the file name (the nominal is dtf_e_test_default.joblib)
 
     Returns
     -------
@@ -868,6 +922,35 @@ def load_test_dtf(suffix=''):
     )
 
     return load(test_data_file_name)
+
+
+def load_multi_test_dtfs(data_names=['default']):
+    '''
+    Load the test data together with load_models().
+    The path for the test data is in models/test_data.
+
+    Parameters
+    ----------
+    suffix: str
+        The suffix added to the file name (the nominal is dtf_e_test_default.joblib)
+
+    Returns
+    -------
+    dtf_e_test: a nested dict of test datasets per trained model
+        1st dict:
+            keys=test_data_suffix, values=2nd dict
+        2nd dict:
+            dict of pandas DataFrames
+            Each entry in the dict is a DataFrame containing the data to test with.
+            The keys of the dict are the energy ranges of the data.
+            Each DataFrame is assumed to contain all 'train_features' and 'labels'.
+    '''
+
+    dtf_e_test = dict()
+    for this_data_name in data_names:
+        dtf_e_test[this_data_name] = load_test_dtf(this_data_name)
+
+    return dtf_e_test
 
 
 def load_models(model_names=list()):
@@ -889,9 +972,10 @@ def load_models(model_names=list()):
         2nd dict:
             keys=energy ranges, values 3rd dict
         3rd dict:
-            'model': trained model for this energy range
+            'model': trained model for this energy range.
             'train_features': list of variable names trained with.
-            'labels': Name of the variable used as the labels in the training.
+            'labels': name of the variable used as the labels in the training.
+            'test_data_suffix': suffix of the test dataset saved to disk.
     '''
 
     trained_models = defaultdict(dict)
@@ -900,18 +984,20 @@ def load_models(model_names=list()):
         models_dir = Path('models').joinpath(model_name)
         for this_file in sorted(models_dir.iterdir(), key=os.path.getmtime):
 
-            e_range_name = this_file.stem.replace('-', ' < ').replace('_', ' ')
+            if this_file.is_file():
 
-            model_file_name = Path('models').joinpath(
-                model_name,
-                '{}.joblib'.format(e_range_name)
-            )
-            trained_models[model_name][e_range_name] = load(this_file)
+                e_range_name = this_file.stem.replace('-', ' < ').replace('_', ' ')
+
+                model_file_name = Path('models').joinpath(
+                    model_name,
+                    '{}.joblib'.format(e_range_name)
+                )
+                trained_models[model_name][e_range_name] = load(this_file)
 
     return trained_models
 
 
-def partition_event_types(dtf_e_test, trained_models, n_types=2):
+def partition_event_types(dtf_e_test, trained_models, n_types=2, type_bins='equal statistics'):
     '''
     Divide the events into n_types event types.
     The bins defining the types are calculated from the predicted label values.
@@ -919,21 +1005,32 @@ def partition_event_types(dtf_e_test, trained_models, n_types=2):
 
     Parameters
     ----------
-    dtf_e_test: dict of pandas DataFrames
-        Each entry in the dict is a DataFrame containing the data to test with.
-        The keys of the dict are the energy ranges of the data.
-        Each DataFrame is assumed to contain all 'train_features' and 'labels'.
+    dtf_e_test: a nested dict of test datasets per trained model
+        1st dict:
+            keys=test_data_suffix, values=2nd dict
+        2nd dict:
+            dict of pandas DataFrames
+            Each entry in the dict is a DataFrame containing the data to test with.
+            The keys of the dict are the energy ranges of the data.
+            Each DataFrame is assumed to contain all 'train_features' and 'labels'.
     trained_models: a nested dict of trained sklearn model per energy range.
-            1st dict:
-                keys=model names, values=2nd dict
-            2nd dict:
-                keys=energy ranges, values 3rd dict
-            3rd dict:
-                'model': trained model for this energy range
-                'train_features': list of variable names trained with.
-                'labels': Name of the variable used as the labels in the training.
+        1st dict:
+            keys=model names, values=2nd dict
+        2nd dict:
+            keys=energy ranges, values 3rd dict
+        3rd dict:
+            'model': trained model for this energy range.
+            'train_features': list of variable names trained with.
+            'labels': name of the variable used as the labels in the training.
+            'test_data_suffix': suffix of the test dataset saved to disk.
     n_types: int (default=2)
-            The number of types to divide the data in.
+        The number of types to divide the data in.
+    type_bins: list of floats or str
+        A list defining the bin sizes of each type,
+        e.g., [0, 0.2, 0.8, 1] would divide the reconstructed labels dataset (angular error)
+        into three bins, best 20%, middle 60% and worst 20%.
+        The list must be n_types + 1 long and the first and last values must be zero and one.
+        The default is equal statistics bins, given as the default string.
 
     Returns
     -------
@@ -948,6 +1045,17 @@ def partition_event_types(dtf_e_test, trained_models, n_types=2):
 
     event_types = dict()
 
+    if type_bins == 'equal statistics':
+        type_bins = np.linspace(0, 1, n_types + 1)
+    elif not isinstance(type_bins, list):
+        raise ValueError('type_bins must be a list of floats or equal statistics')
+    elif len(type_bins) != n_types + 1:
+        raise ValueError('type_bins must be n_types + 1 long')
+    elif type_bins[0] != 0 or type_bins[-1] != 1:
+        raise ValueError('the first and last values of type_bins must be zero and one')
+    else:
+        pass
+
     for model_name, model in trained_models.items():
 
         event_types[model_name] = dict()
@@ -957,12 +1065,15 @@ def partition_event_types(dtf_e_test, trained_models, n_types=2):
             event_types[model_name][this_e_range] = defaultdict(list)
             event_types[model_name][this_e_range] = defaultdict(list)
 
-            X_test = dtf_e_test[this_e_range][this_model['train_features']].values
+            # To keep lines short
+            dtf_this_e = dtf_e_test[this_model['test_data_suffix']][this_e_range]
+
+            X_test = dtf_this_e[this_model['train_features']].values
             y_pred = this_model['model'].predict(X_test)
 
             event_types_bins = mstats.mquantiles(
                 y_pred,
-                np.linspace(0, 1, n_types + 1)
+                type_bins
             )
 
             for this_value in y_pred:
@@ -973,7 +1084,7 @@ def partition_event_types(dtf_e_test, trained_models, n_types=2):
                     this_event_type = n_types
                 event_types[model_name][this_e_range]['reco'].append(this_event_type)
 
-            for this_value in dtf_e_test[this_e_range][this_model['labels']].values:
+            for this_value in dtf_this_e[this_model['labels']].values:
                 this_event_type = np.searchsorted(event_types_bins, this_value)
                 if this_event_type < 1:
                     this_event_type = 1
@@ -992,20 +1103,24 @@ def predicted_event_types(dtf_e_test, trained_models, n_types=2):
 
     Parameters
     ----------
-    dtf_e_test: dict of pandas DataFrames
-        Each entry in the dict is a DataFrame containing the data to test with.
-        The keys of the dict are the energy ranges of the data.
-        Each DataFrame is assumed to contain all 'train_features'
-        and a column of true event types as added from add_event_types_column().
+    dtf_e_test: a nested dict of test datasets per trained model
+        1st dict:
+            keys=test_data_suffix, values=2nd dict
+        2nd dict:
+            dict of pandas DataFrames
+            Each entry in the dict is a DataFrame containing the data to test with.
+            The keys of the dict are the energy ranges of the data.
+            Each DataFrame is assumed to contain all 'train_features' and 'labels'.
     trained_models: a nested dict of trained sklearn model per energy range.
             1st dict:
                 keys=model names, values=2nd dict
             2nd dict:
                 keys=energy ranges, values 3rd dict
             3rd dict:
-                'model': trained model for this energy range
+                'model': trained model for this energy range,
                 'train_features': list of variable names trained with.
-                'labels': Name of the variable used as the labels in the training.
+                'labels': name of the variable used as the labels in the training.
+                'test_data_suffix': suffix of the test dataset saved to disk.
     n_types: int (default=2)
             The number of types used in the training.
 
@@ -1031,11 +1146,14 @@ def predicted_event_types(dtf_e_test, trained_models, n_types=2):
             event_types[model_name][this_e_range] = defaultdict(list)
             event_types[model_name][this_e_range] = defaultdict(list)
 
-            event_types[model_name][this_e_range]['true'] = dtf_e_test[this_e_range][
+            # To keep lines short
+            dtf_this_e = dtf_e_test[this_model['test_data_suffix']][this_e_range]
+
+            event_types[model_name][this_e_range]['true'] = dtf_this_e[
                 'event_type_{:d}'.format(n_types)
             ]
 
-            X_test = dtf_e_test[this_e_range][this_model['train_features']].values
+            X_test = dtf_this_e[this_model['train_features']].values
             event_types[model_name][this_e_range]['reco'] = this_model['model'].predict(X_test)
 
     return event_types
@@ -1093,6 +1211,37 @@ def add_event_types_column(dtf_e, labels, n_types=[2, 3, 4]):
     return dtf_e
 
 
+def extract_unique_dataset_names(trained_models):
+    '''
+    Extract all test datasets names necessary for the given trained models.
+
+    Parameters
+    ----------
+    trained_models: a nested dict of trained sklearn model per energy range.
+            1st dict:
+                keys=model names, values=2nd dict
+            2nd dict:
+                keys=energy ranges, values 3rd dict
+            3rd dict:
+                'model': trained model for this energy range.
+                'train_features': list of variable names trained with.
+                'labels': name of the variable used as the labels in the training.
+                'test_data_suffix': suffix of the test dataset saved to disk.
+
+    Returns
+    -------
+    dataset_names: set
+        Set of unique data set names
+    '''
+
+    dataset_names = set()
+    for model in trained_models.values():
+        for this_model in model.values():
+            dataset_names.add(this_model['test_data_suffix'])
+
+    return dataset_names
+
+
 def plot_pearson_correlation(dtf, title):
     '''
     Calculate the Pearson correlation between all variables in this DataFrame.
@@ -1133,13 +1282,17 @@ def plot_test_vs_predict(dtf_e_test, trained_models, trained_model_name):
 
     Parameters
     ----------
-    dtf_e_test: dict of pandas DataFrames
-        Each entry in the dict is a DataFrame containing the data to test with.
-        The keys of the dict are the energy ranges of the data.
-        Each DataFrame is assumed to contain all 'train_features' and 'labels'.
+    dtf_e_test: a nested dict of test datasets per trained model
+        1st dict:
+            keys=test_data_suffix, values=2nd dict
+        2nd dict:
+            dict of pandas DataFrames
+            Each entry in the dict is a DataFrame containing the data to test with.
+            The keys of the dict are the energy ranges of the data.
+            Each DataFrame is assumed to contain all 'train_features' and 'labels'.
     trained_models: a nested dict of one trained sklearn model per energy range.
         1st dict:
-            keys=energy ranges, values 2nd dict
+            keys=energy ranges, values=2nd dict
         2nd dict:
             'model': trained model for this energy range
             'train_features': list of variable names trained with.
@@ -1159,8 +1312,11 @@ def plot_test_vs_predict(dtf_e_test, trained_models, trained_model_name):
 
     for i_plot, (this_e_range, this_model) in enumerate(trained_models.items()):
 
-        X_test = dtf_e_test[this_e_range][this_model['train_features']].values
-        y_test = dtf_e_test[this_e_range][this_model['labels']].values
+        # To keep lines short
+        dtf_this_e = dtf_e_test[this_model['test_data_suffix']][this_e_range]
+
+        X_test = dtf_this_e[this_model['train_features']].values
+        y_test = dtf_this_e[this_model['labels']].values
 
         y_pred = this_model['model'].predict(X_test)
 
@@ -1257,19 +1413,24 @@ def plot_score_comparison(dtf_e_test, trained_models):
 
     Parameters
     ----------
-    dtf_e_test: dict of pandas DataFrames
-        Each entry in the dict is a DataFrame containing the data to test with.
-        The keys of the dict are the energy ranges of the data.
-        Each DataFrame is assumed to contain all 'train_features' and 'labels'.
+    dtf_e_test: a nested dict of test datasets per trained model
+        1st dict:
+            keys=test_data_suffix, values=2nd dict
+        2nd dict:
+            dict of pandas DataFrames
+            Each entry in the dict is a DataFrame containing the data to test with.
+            The keys of the dict are the energy ranges of the data.
+            Each DataFrame is assumed to contain all 'train_features' and 'labels'.
     trained_models: a nested dict of trained sklearn model per energy range.
         1st dict:
             keys=model names, values=2nd dict
         2nd dict:
             keys=energy ranges, values 3rd dict
         3rd dict:
-            'model': dict of trained models for this energy range
+            'model': dict of trained models for this energy range.
             'train_features': list of variable names trained with.
-            'labels': Name of the variable used as the labels in the training.
+            'labels': name of the variable used as the labels in the training.
+            'test_data_suffix': suffix of the test dataset saved to disk.
 
     Returns
     -------
@@ -1290,8 +1451,11 @@ def plot_score_comparison(dtf_e_test, trained_models):
 
         for this_e_range, this_model in trained_model.items():
 
-            X_test = dtf_e_test[this_e_range][this_model['train_features']].values
-            y_test = dtf_e_test[this_e_range][this_model['labels']].values
+            # To keep lines short
+            dtf_this_e = dtf_e_test[this_model['test_data_suffix']][this_e_range]
+
+            X_test = dtf_this_e[this_model['train_features']].values
+            y_test = dtf_this_e[this_model['labels']].values
 
             y_pred = this_model['model'].predict(X_test)
 
@@ -1341,11 +1505,15 @@ def plot_confusion_matrix(event_types, trained_model_name, n_types=2):
 
         ax = axs[int(np.floor((i_plot)/ncols)), (i_plot) % ncols]
 
-        cm = confusion_matrix(event_types[this_e_range]['true'], event_types[this_e_range]['reco'])
+        cm = confusion_matrix(
+            event_types[this_e_range]['true'],
+            event_types[this_e_range]['reco'],
+            normalize='true',
+        )
         sns.heatmap(
             cm,
             annot=True,
-            fmt='d',
+            fmt='.1%',
             ax=ax,
             cmap='Blues',
             cbar=False,
