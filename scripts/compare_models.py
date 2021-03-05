@@ -18,9 +18,10 @@ if __name__ == '__main__':
 
     labels, train_features = event_types.nominal_labels_train_features()
 
-    plot_predict_dist = True
+    plot_predict_dist = False
     plot_scores = True
-    plot_confusion_matrix = True
+    plot_confusion_matrix = False
+    plot_1d_conf_matrix = False
     n_types = 3
     type_bins = list(np.linspace(0, 1, n_types + 1))
     # type_bins = [0, 0.2, 0.8, 1]
@@ -50,11 +51,11 @@ if __name__ == '__main__':
     # models_to_compare = ['All', 'no_asym', 'no_tgrad_x', 'no_asym_tgrad_x']
     # models_to_compare = ['All']
     models_to_compare = [
-        'test_size_55p',
-        'test_size_65p',
-        'test_size_75p',
-        'test_size_85p',
-        'test_size_95p',
+        'all_features',
+        'no_width',
+        'no_length',
+        'no_dispCombine',
+        'old_features',
     ]
     if len(models_to_compare) > 1:
         group_models_to_compare = np.array_split(
@@ -85,10 +86,11 @@ if __name__ == '__main__':
             plt.clf()
 
         if plot_scores:
-            plt = event_types.plot_score_comparison(dtf_e_test, trained_models)
+            plt, scores = event_types.plot_score_comparison(dtf_e_test, trained_models)
             plt.savefig('plots/scores_features_{}.pdf'.format(i_group + 1))
             plt.savefig('plots/scores_features_{}.png'.format(i_group + 1))
             plt.clf()
+            event_types.save_scores(scores)
 
         if plot_confusion_matrix:
 
@@ -114,19 +116,21 @@ if __name__ == '__main__':
                     n_types
                 ))
 
-                plt = event_types.plot_1d_confusion_matrix(
-                    this_event_types,
-                    this_trained_model_name,
-                    n_types
-                )
+                if plot_1d_conf_matrix:
 
-                plt.savefig('plots/{}_1d_confusion_matrix_n_types_{}.pdf'.format(
-                    this_trained_model_name,
-                    n_types
-                ))
-                plt.savefig('plots/{}_1d_confusion_matrix_n_types_{}.png'.format(
-                    this_trained_model_name,
-                    n_types
-                ))
+                    plt = event_types.plot_1d_confusion_matrix(
+                        this_event_types,
+                        this_trained_model_name,
+                        n_types
+                    )
+
+                    plt.savefig('plots/{}_1d_confusion_matrix_n_types_{}.pdf'.format(
+                        this_trained_model_name,
+                        n_types
+                    ))
+                    plt.savefig('plots/{}_1d_confusion_matrix_n_types_{}.png'.format(
+                        this_trained_model_name,
+                        n_types
+                    ))
 
                 plt.clf()

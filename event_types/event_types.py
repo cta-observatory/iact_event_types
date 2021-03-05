@@ -136,6 +136,7 @@ def branches_to_read():
     '''
 
     branches = [
+        'MCe0',
         'MCze',
         'MCaz',
         'Ze',
@@ -163,13 +164,13 @@ def branches_to_read():
         'meanPedvar_Image',
         'fui',
         'cross',
-        'crossO',
         'R',
         'ES',
-        'MWR',
-        'MLR',
         'asym',
         'tgrad_x',
+        'width',
+        'length',
+        'DispWoff_T',
     ]
 
     return branches
@@ -198,25 +199,47 @@ def nominal_labels_train_features():
         'MSCW',
         'MSCL',
         'log_EChi2S',
-        'log_av_size',
         'log_EmissionHeight',
         'log_EmissionHeightChi2',
-        'av_dist',
         'log_DispDiff',
         'log_dESabs',
         'loss_sum',
         'NTrig',
         'meanPedvar_Image',
-        'av_fui',
-        'av_cross',
-        'av_crossO',
-        'av_R',
-        'av_ES',
-        'MWR',
-        'MLR',
         'MSWOL',
+        'log_av_size',
+        'log_me_size',
+        'log_std_size',
+        'av_dist',
+        'me_dist',
+        'std_dist',
+        'av_fui',
+        'me_fui',
+        'std_fui',
+        'av_cross',
+        'me_cross',
+        'std_cross',
+        'av_R',
+        'me_R',
+        'std_R',
+        'av_ES',
+        'me_ES',
+        'std_ES',
         'av_asym',
+        'me_asym',
+        'std_asym',
         'av_tgrad_x',
+        'me_tgrad_x',
+        'std_tgrad_x',
+        'av_width',
+        'me_width',
+        'std_width',
+        'av_length',
+        'me_length',
+        'std_length',
+        'av_dispCombine',
+        'me_dispCombine',
+        'std_dispCombine',
     ]
 
     return labels, train_features
@@ -240,6 +263,11 @@ def extract_df_from_dl2(root_filename):
     -------
     A pandas DataFrame with variables to use in the regression/classification, after cuts.
     '''
+
+    DISP_ERROR_EXPONENTIAL = 50
+
+    def disp_error_weight(disp_error):
+        return np.exp(-1 * DISP_ERROR_EXPONENTIAL * abs(disp_error))
 
     branches = branches_to_read()
 
@@ -283,8 +311,8 @@ def extract_df_from_dl2(root_filename):
         )
 
         # Variables for training:
-        av_size = [np.average(sizes) for sizes in data_arrays['size'][gamma_like_events]]
         reco_energy = data_arrays['ErecS'][gamma_like_events]
+        true_energy = data_arrays['MCe0'][gamma_like_events]
         NTels_reco = data_arrays['NImages'][gamma_like_events]
         x_cores = data_arrays['Xcore'][gamma_like_events]
         y_cores = data_arrays['Ycore'][gamma_like_events]
@@ -301,24 +329,67 @@ def extract_df_from_dl2(root_filename):
         EmissionHeight = data_arrays['EmissionHeight'][gamma_like_events]
         EmissionHeightChi2 = data_arrays['EmissionHeightChi2'][gamma_like_events]
         dist = data_arrays['dist'][gamma_like_events]
-        av_dist = [np.average(dists) for dists in dist]
         DispDiff = data_arrays['DispDiff'][gamma_like_events]
         dESabs = data_arrays['dESabs'][gamma_like_events]
         loss_sum = [np.sum(losses) for losses in data_arrays['loss'][gamma_like_events]]
         NTrig = data_arrays['NTrig'][gamma_like_events]
         meanPedvar_Image = data_arrays['meanPedvar_Image'][gamma_like_events]
+
+        av_size = [np.average(sizes) for sizes in data_arrays['size'][gamma_like_events]]
+        me_size = [np.median(sizes) for sizes in data_arrays['size'][gamma_like_events]]
+        std_size = [np.std(sizes) for sizes in data_arrays['size'][gamma_like_events]]
+
+        av_dist = [np.average(dists) for dists in dist]
+        me_dist = [np.median(dists) for dists in dist]
+        std_dist = [np.std(dists) for dists in dist]
+
         av_fui = [np.average(fui) for fui in data_arrays['fui'][gamma_like_events]]
+        me_fui = [np.median(fui) for fui in data_arrays['fui'][gamma_like_events]]
+        std_fui = [np.std(fui) for fui in data_arrays['fui'][gamma_like_events]]
+
         av_cross = [np.average(cross) for cross in data_arrays['cross'][gamma_like_events]]
-        av_crossO = [np.average(crossO) for crossO in data_arrays['crossO'][gamma_like_events]]
+        me_cross = [np.median(cross) for cross in data_arrays['cross'][gamma_like_events]]
+        std_cross = [np.std(cross) for cross in data_arrays['cross'][gamma_like_events]]
+
         av_R = [np.average(R) for R in data_arrays['R'][gamma_like_events]]
+        me_R = [np.median(R) for R in data_arrays['R'][gamma_like_events]]
+        std_R = [np.std(R) for R in data_arrays['R'][gamma_like_events]]
+
         av_ES = [np.average(ES) for ES in data_arrays['ES'][gamma_like_events]]
-        MWR = data_arrays['MWR'][gamma_like_events]
-        MLR = data_arrays['MLR'][gamma_like_events]
+        me_ES = [np.median(ES) for ES in data_arrays['ES'][gamma_like_events]]
+        std_ES = [np.std(ES) for ES in data_arrays['ES'][gamma_like_events]]
+
         av_asym = [np.average(asym) for asym in data_arrays['asym'][gamma_like_events]]
+        me_asym = [np.median(asym) for asym in data_arrays['asym'][gamma_like_events]]
+        std_asym = [np.std(asym) for asym in data_arrays['asym'][gamma_like_events]]
+
         av_tgrad_x = [np.average(tgrad_x) for tgrad_x in data_arrays['tgrad_x'][gamma_like_events]]
+        me_tgrad_x = [np.median(tgrad_x) for tgrad_x in data_arrays['tgrad_x'][gamma_like_events]]
+        std_tgrad_x = [np.std(tgrad_x) for tgrad_x in data_arrays['tgrad_x'][gamma_like_events]]
+
+        av_width = [np.average(width) for width in data_arrays['width'][gamma_like_events]]
+        me_width = [np.median(width) for width in data_arrays['width'][gamma_like_events]]
+        std_width = [np.std(width) for width in data_arrays['width'][gamma_like_events]]
+
+        av_length = [np.average(length) for length in data_arrays['length'][gamma_like_events]]
+        me_length = [np.median(length) for length in data_arrays['length'][gamma_like_events]]
+        std_length = [np.std(length) for length in data_arrays['length'][gamma_like_events]]
+
+        av_dispCombine = [
+            np.average(disp_error_weight(disp_error))
+            for disp_error in data_arrays['DispWoff_T'][gamma_like_events]
+        ]
+        me_dispCombine = [
+            np.median(disp_error_weight(disp_error))
+            for disp_error in data_arrays['DispWoff_T'][gamma_like_events]
+        ]
+        std_dispCombine = [
+            np.std(disp_error_weight(disp_error))
+            for disp_error in data_arrays['DispWoff_T'][gamma_like_events]
+        ]
 
         data_dict['log_ang_diff'].extend(tuple(np.log10(ang_diff.value)))
-        data_dict['log_av_size'].extend(tuple(np.log10(av_size)))
+        data_dict['log_true_energy'].extend(tuple(np.log10(true_energy)))
         data_dict['log_reco_energy'].extend(tuple(np.log10(reco_energy)))
         data_dict['log_NTels_reco'].extend(tuple(np.log10(NTels_reco)))
         data_dict['array_distance'].extend(tuple(array_distance))
@@ -331,23 +402,56 @@ def extract_df_from_dl2(root_filename):
         data_dict['MSCL'].extend(tuple(MSCL))
         data_dict['log_EmissionHeight'].extend(tuple(np.log10(EmissionHeight)))
         data_dict['log_EmissionHeightChi2'].extend(tuple(np.log10(EmissionHeightChi2)))
-        data_dict['av_dist'].extend(tuple(av_dist))
         data_dict['log_DispDiff'].extend(tuple(np.log10(DispDiff)))
         data_dict['log_dESabs'].extend(tuple(np.log10(dESabs)))
         data_dict['loss_sum'].extend(tuple(loss_sum))
         data_dict['NTrig'].extend(tuple(NTrig))
         data_dict['meanPedvar_Image'].extend(tuple(meanPedvar_Image))
-        data_dict['av_fui'].extend(tuple(av_fui))
-        data_dict['av_cross'].extend(tuple(av_cross))
-        data_dict['av_crossO'].extend(tuple(av_crossO))
-        data_dict['av_R'].extend(tuple(av_R))
-        data_dict['av_ES'].extend(tuple(av_ES))
-        data_dict['MWR'].extend(tuple(MWR))
-        data_dict['MLR'].extend(tuple(MLR))
         data_dict['MSWOL'].extend(tuple(MSCW/MSCL))
-        data_dict['MWOL'].extend(tuple(MWR/MLR))
+
+        data_dict['log_av_size'].extend(tuple(np.log10(av_size)))
+        data_dict['log_me_size'].extend(tuple(np.log10(me_size)))
+        data_dict['log_std_size'].extend(tuple(np.log10(std_size)))
+
+        data_dict['av_dist'].extend(tuple(av_dist))
+        data_dict['me_dist'].extend(tuple(me_dist))
+        data_dict['std_dist'].extend(tuple(std_dist))
+
+        data_dict['av_fui'].extend(tuple(av_fui))
+        data_dict['me_fui'].extend(tuple(me_fui))
+        data_dict['std_fui'].extend(tuple(std_fui))
+
+        data_dict['av_cross'].extend(tuple(av_cross))
+        data_dict['me_cross'].extend(tuple(me_cross))
+        data_dict['std_cross'].extend(tuple(std_cross))
+
+        data_dict['av_R'].extend(tuple(av_R))
+        data_dict['me_R'].extend(tuple(me_R))
+        data_dict['std_R'].extend(tuple(std_R))
+
+        data_dict['av_ES'].extend(tuple(av_ES))
+        data_dict['me_ES'].extend(tuple(me_ES))
+        data_dict['std_ES'].extend(tuple(std_ES))
+
         data_dict['av_asym'].extend(tuple(av_asym))
+        data_dict['me_asym'].extend(tuple(me_asym))
+        data_dict['std_asym'].extend(tuple(std_asym))
+
         data_dict['av_tgrad_x'].extend(tuple(av_tgrad_x))
+        data_dict['me_tgrad_x'].extend(tuple(me_tgrad_x))
+        data_dict['std_tgrad_x'].extend(tuple(std_tgrad_x))
+
+        data_dict['av_width'].extend(tuple(av_width))
+        data_dict['me_width'].extend(tuple(me_width))
+        data_dict['std_width'].extend(tuple(std_width))
+
+        data_dict['av_length'].extend(tuple(av_length))
+        data_dict['me_length'].extend(tuple(me_length))
+        data_dict['std_length'].extend(tuple(std_length))
+
+        data_dict['av_dispCombine'].extend(tuple(av_dispCombine))
+        data_dict['me_dispCombine'].extend(tuple(me_dispCombine))
+        data_dict['std_dispCombine'].extend(tuple(std_dispCombine))
 
     return pd.DataFrame(data=data_dict)
 
@@ -891,6 +995,27 @@ def save_test_dtf(dtf_e_test, suffix='default'):
         'dtf_e_test{}.joblib'.format(suffix)
     )
     dump(dtf_e_test, test_data_file_name, compress=3)
+
+    return
+
+
+def save_scores(scores):
+    '''
+    Save the scores of the trained models to disk.
+    The path for the scores is in scores/'model name'.
+
+    Parameters
+    ----------
+    scores: a dict of scores per energy range per trained sklearn model.
+        dict:
+            keys=model names, values=list of scores
+    '''
+
+    this_dir = Path('scores').mkdir(parents=True, exist_ok=True)
+    for model_name, these_scores in scores.items():
+
+        file_name = Path('scores').joinpath('{}.joblib'.format(model_name))
+        dump(these_scores, file_name, compress=3)
 
     return
 
@@ -1441,14 +1566,14 @@ def plot_score_comparison(dtf_e_test, trained_models):
 
     fig, ax = plt.subplots(figsize=(8, 6))
 
-    scores = defaultdict(list)
-    rms_scores = defaultdict(list)
+    scores = defaultdict(dict)
     energy_bins = extract_energy_bins(trained_models[next(iter(trained_models))].keys())
 
     for this_model_name, trained_model in trained_models.items():
 
         print('Calculating scores for {}'.format(this_model_name))
 
+        scores_this_model = list()
         for this_e_range, this_model in trained_model.items():
 
             # To keep lines short
@@ -1459,10 +1584,15 @@ def plot_score_comparison(dtf_e_test, trained_models):
 
             y_pred = this_model['model'].predict(X_test)
 
-            scores[this_model_name].append(this_model['model'].score(X_test, y_test))
-            # rms_scores[this_model_name].append(metrics.mean_squared_error(y_test, y_pred))
+            scores_this_model.append(this_model['model'].score(X_test, y_test))
 
-        ax.plot(energy_bins, scores[this_model_name], label=this_model_name)
+        scores[this_model_name]['scores'] = scores_this_model
+        scores[this_model_name]['energy'] = energy_bins
+        ax.plot(
+            scores[this_model_name]['energy'],
+            scores[this_model_name]['scores'],
+            label=this_model_name
+        )
 
     ax.set_xlabel('E [TeV]')
     ax.set_ylabel('score')
@@ -1470,7 +1600,7 @@ def plot_score_comparison(dtf_e_test, trained_models):
     ax.legend()
     plt.tight_layout()
 
-    return plt
+    return plt, scores
 
 
 def plot_confusion_matrix(event_types, trained_model_name, n_types=2):
