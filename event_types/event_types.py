@@ -136,6 +136,8 @@ def branches_to_read():
     '''
 
     branches = [
+        'runNumber',
+        'eventNumber',
         'MCe0',
         'MCze',
         'MCaz',
@@ -231,15 +233,6 @@ def nominal_labels_train_features():
         'av_tgrad_x',
         'me_tgrad_x',
         'std_tgrad_x',
-        'av_width',
-        'me_width',
-        'std_width',
-        'av_length',
-        'me_length',
-        'std_length',
-        'av_dispCombine',
-        'me_dispCombine',
-        'std_dispCombine',
     ]
 
     return labels, train_features
@@ -311,6 +304,8 @@ def extract_df_from_dl2(root_filename):
         )
 
         # Variables for training:
+        runNumber = data_arrays['runNumber'][gamma_like_events]
+        eventNumber = data_arrays['eventNumber'][gamma_like_events]
         reco_energy = data_arrays['ErecS'][gamma_like_events]
         true_energy = data_arrays['MCe0'][gamma_like_events]
         NTels_reco = data_arrays['NImages'][gamma_like_events]
@@ -328,7 +323,6 @@ def extract_df_from_dl2(root_filename):
         MSCL = data_arrays['MSCL'][gamma_like_events]
         EmissionHeight = data_arrays['EmissionHeight'][gamma_like_events]
         EmissionHeightChi2 = data_arrays['EmissionHeightChi2'][gamma_like_events]
-        dist = data_arrays['dist'][gamma_like_events]
         DispDiff = data_arrays['DispDiff'][gamma_like_events]
         dESabs = data_arrays['dESabs'][gamma_like_events]
         loss_sum = [np.sum(losses) for losses in data_arrays['loss'][gamma_like_events]]
@@ -339,9 +333,9 @@ def extract_df_from_dl2(root_filename):
         me_size = [np.median(sizes) for sizes in data_arrays['size'][gamma_like_events]]
         std_size = [np.std(sizes) for sizes in data_arrays['size'][gamma_like_events]]
 
-        av_dist = [np.average(dists) for dists in dist]
-        me_dist = [np.median(dists) for dists in dist]
-        std_dist = [np.std(dists) for dists in dist]
+        av_dist = [np.average(dists) for dists in data_arrays['dist'][gamma_like_events]]
+        me_dist = [np.median(dists) for dists in data_arrays['dist'][gamma_like_events]]
+        std_dist = [np.std(dists) for dists in data_arrays['dist'][gamma_like_events]]
 
         av_fui = [np.average(fui) for fui in data_arrays['fui'][gamma_like_events]]
         me_fui = [np.median(fui) for fui in data_arrays['fui'][gamma_like_events]]
@@ -388,6 +382,8 @@ def extract_df_from_dl2(root_filename):
             for disp_error in data_arrays['DispWoff_T'][gamma_like_events]
         ]
 
+        data_dict['runNumber'].extend(tuple(runNumber))
+        data_dict['eventNumber'].extend(tuple(eventNumber))
         data_dict['log_ang_diff'].extend(tuple(np.log10(ang_diff.value)))
         data_dict['log_true_energy'].extend(tuple(np.log10(true_energy)))
         data_dict['log_reco_energy'].extend(tuple(np.log10(reco_energy)))

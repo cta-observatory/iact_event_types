@@ -18,9 +18,9 @@ if __name__ == '__main__':
 
     labels, train_features = event_types.nominal_labels_train_features()
 
-    plot_predict_dist = False
+    plot_predict_dist = True
     plot_scores = True
-    plot_confusion_matrix = False
+    plot_confusion_matrix = True
     plot_1d_conf_matrix = False
     n_types = 3
     type_bins = list(np.linspace(0, 1, n_types + 1))
@@ -28,34 +28,22 @@ if __name__ == '__main__':
 
     Path('plots').mkdir(parents=True, exist_ok=True)
 
-    # models_to_compare = [
-    #     # 'linear_regression',
-    #     # 'random_forest',
-    #     # 'MLP',
-    #     # 'MLP_relu',
-    #     # 'MLP_logistic',
-    #     # 'MLP_uniform',
-    #     'MLP_small',
-    #     # 'MLP_lbfgs',
-    #     # 'BDT',
-    #     # 'ridge',
-    #     # 'SVR',
-    #     # 'linear_SVR',
-    #     # 'SGD',
-    #     # 'MLP_small_less_vars',
-    #     # 'MLP_meanPedvar_av_cross_O',
-    # ]
-    # models_to_compare = ['MLP_{}'.format(var) for var in train_features]
-    # models_to_compare = ['All', 'features_1', 'features_2', 'features_3', 'features_4']
-    # models_to_compare = ['All', 'features_5', 'features_6', 'features_7', 'features_8']
-    # models_to_compare = ['All', 'no_asym', 'no_tgrad_x', 'no_asym_tgrad_x']
-    # models_to_compare = ['All']
     models_to_compare = [
-        'all_features',
-        'no_width',
-        'no_length',
-        'no_dispCombine',
-        'old_features',
+        # 'linear_regression',
+        # 'random_forest',
+        # 'MLP',
+        # 'MLP_relu',
+        # 'MLP_logistic',
+        # 'MLP_uniform',
+        'MLP_small',
+        # 'MLP_lbfgs',
+        # 'BDT',
+        # 'ridge',
+        # 'SVR',
+        # 'linear_SVR',
+        # 'SGD',
+        # 'MLP_small_less_vars',
+        # 'MLP_meanPedvar_av_cross_O',
     ]
     if len(models_to_compare) > 1:
         group_models_to_compare = np.array_split(
