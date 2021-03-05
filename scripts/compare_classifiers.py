@@ -18,30 +18,29 @@ if __name__ == '__main__':
 
     plot_scores = True
     plot_confusion_matrix = True
-    n_types = 2
+    n_types = 3
 
     Path('plots').mkdir(parents=True, exist_ok=True)
-    dtf_e_test = event_types.load_test_dtf('classification')
 
     models_to_compare = [
-        'MLP_classifier',
-        'MLP_relu_classifier',
-        'MLP_logistic_classifier',
-        'MLP_uniform_classifier',
+        # 'MLP_classifier',
+        # 'MLP_relu_classifier',
+        # 'MLP_logistic_classifier',
+        # 'MLP_uniform_classifier',
         'MLP_small_classifier',
-        'MLP_small_classifier',
-        'random_forest_classifier',
-        'BDT_classifier',
-        'ridge_classifier',
+        # 'MLP_small_classifier',
+        # 'random_forest_classifier',
+        # 'BDT_classifier',
+        # 'ridge_classifier',
         # 'ridgeCV_classifier',  # unnecessary, same as the ridge classifier
         # 'SVC_classifier',  # Fails to evaluate for some reason, all SVC based fail
-        'SGD_classifier',
+        # 'SGD_classifier',
         # 'Gaussian_process_classifier',  # Takes forever to train
         # 'bagging_svc_classifier',  # Fails to evaluate for some reason, all SVC based fail
-        'bagging_dt_classifier',
+        # 'bagging_dt_classifier',
         # 'oneVsRest_classifier',  # Fails to evaluate for some reason, all SVC based fail
-        'gradient_boosting_classifier',
-        'MLP_small_classifier',
+        # 'gradient_boosting_classifier',
+        # 'MLP_small_classifier',
     ]
 
     models_to_compare = ['{}_ntypes_{:d}'.format(m, n_types) for m in models_to_compare]
@@ -56,6 +55,8 @@ if __name__ == '__main__':
     for i_group, these_models_to_compare in enumerate(group_models_to_compare):
 
         trained_models = event_types.load_models(these_models_to_compare)
+        dataset_names = event_types.extract_unique_dataset_names(trained_models)
+        dtf_e_test = event_types.load_multi_test_dtfs(dataset_names)
 
         if plot_scores:
             plt = event_types.plot_score_comparison(dtf_e_test, trained_models)
