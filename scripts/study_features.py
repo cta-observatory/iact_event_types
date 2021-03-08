@@ -13,8 +13,41 @@ if __name__ == '__main__':
     )
 
     args = parser.parse_args()
-
     start_from_DL2 = False
+
+    labels, train_features = event_types.nominal_labels_train_features()
+
+    all_models = event_types.define_regressors()
+
+    models_to_train = dict()
+
+    features = dict()
+    features['all_features'] = train_features
+    features['no_width'] = copy.copy(train_features)
+    for feature_name in train_features:
+        if feature_name.endswith('_width'):
+            features['no_width'].remove(feature_name)
+    features['no_length'] = copy.copy(train_features)
+    for feature_name in train_features:
+        if feature_name.endswith('_length'):
+            features['no_length'].remove(feature_name)
+    features['no_dispCombine'] = copy.copy(train_features)
+    for feature_name in train_features:
+        if feature_name.endswith('_dispCombine'):
+            features['no_dispCombine'].remove(feature_name)
+    features['old_features'] = copy.copy(train_features)
+    for feature_name in train_features:
+        if any(feature_name.endswith(suffix) for suffix in ['_width', '_length', '_dispCombine']):
+            features['old_features'].remove(feature_name)
+
+    for features_name, these_features in features.items():
+        print(features_name, these_features)
+        models_to_train[features_name] = dict()
+        models_to_train[features_name]['train_features'] = these_features
+        models_to_train[features_name]['labels'] = labels
+        models_to_train[features_name]['model'] = all_models['MLP_small']
+        models_to_train[features_name]['test_data_suffix'] = 'default'
+
     if start_from_DL2:
         # Prod3b
         # dl2_file_name = (
@@ -35,30 +68,6 @@ if __name__ == '__main__':
     dtf_e = event_types.bin_data_in_energy(dtf)
 
     dtf_e_train, dtf_e_test = event_types.split_data_train_test(dtf_e)
-
-    labels, train_features = event_types.nominal_labels_train_features()
-
-    all_models = event_types.define_regressors()
-
-    models_to_train = dict()
-
-    features = dict()
-    features['All'] = train_features
-    features['no_asym'] = copy.copy(train_features)
-    features['no_asym'].remove('av_asym')
-    features['no_tgrad_x'] = copy.copy(train_features)
-    features['no_tgrad_x'].remove('av_tgrad_x')
-    features['no_asym_tgrad_x'] = copy.copy(train_features)
-    features['no_asym_tgrad_x'].remove('av_asym')
-    features['no_asym_tgrad_x'].remove('av_tgrad_x')
-
-    for features_name, these_features in features.items():
-        print(features_name, these_features)
-        models_to_train[features_name] = dict()
-        models_to_train[features_name]['train_features'] = these_features
-        models_to_train[features_name]['labels'] = labels
-        models_to_train[features_name]['model'] = all_models['MLP_small']
-        models_to_train[features_name]['test_data_suffix'] = 'default'
 
     trained_models = event_types.train_models(
         dtf_e_train,
