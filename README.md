@@ -12,7 +12,7 @@ Once the models are trained, run the compare_models.py scripts, making sure the 
  ```
  conda env create -n event_types -f environment.yml
  source activate event_types
-python setup.py install
+ python setup.py install
  ```
 
 Once the package is set up, next time just run
