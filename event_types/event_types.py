@@ -170,9 +170,6 @@ def branches_to_read():
         'ES',
         'asym',
         'tgrad_x',
-        'width',
-        'length',
-        'DispWoff_T',
     ]
 
     return branches
@@ -205,7 +202,6 @@ def nominal_labels_train_features():
         'log_EmissionHeightChi2',
         'log_DispDiff',
         'log_dESabs',
-        'loss_sum',
         'NTrig',
         'meanPedvar_Image',
         'MSWOL',
@@ -227,6 +223,10 @@ def nominal_labels_train_features():
         'av_ES',
         'me_ES',
         'std_ES',
+        'sum_loss',
+        'av_loss',
+        'me_loss',
+        'std_loss',
         'av_asym',
         'me_asym',
         'std_asym',
@@ -257,11 +257,6 @@ def extract_df_from_dl2(root_filename):
     A pandas DataFrame with variables to use in the regression/classification, after cuts.
     '''
 
-    DISP_ERROR_EXPONENTIAL = 50
-
-    def disp_error_weight(disp_error):
-        return np.exp(-1 * DISP_ERROR_EXPONENTIAL * abs(disp_error))
-
     branches = branches_to_read()
 
     particle_file = uproot.open(root_filename)
@@ -288,6 +283,10 @@ def extract_df_from_dl2(root_filename):
         expressions=branches,
         library='np')
     ):
+
+        if i_event > 0:
+            if (i_event * step_size) % 100000 == 0:
+                print('Extracted {} events'.format(i_event * step_size))
 
         gamma_like_events = gamma_like_events_all[i_event * step_size:(i_event + 1) * step_size]
         # Variables for training:
@@ -325,7 +324,6 @@ def extract_df_from_dl2(root_filename):
         EmissionHeightChi2 = data_arrays['EmissionHeightChi2'][gamma_like_events]
         DispDiff = data_arrays['DispDiff'][gamma_like_events]
         dESabs = data_arrays['dESabs'][gamma_like_events]
-        loss_sum = [np.sum(losses) for losses in data_arrays['loss'][gamma_like_events]]
         NTrig = data_arrays['NTrig'][gamma_like_events]
         meanPedvar_Image = data_arrays['meanPedvar_Image'][gamma_like_events]
 
@@ -353,6 +351,11 @@ def extract_df_from_dl2(root_filename):
         me_ES = [np.median(ES) for ES in data_arrays['ES'][gamma_like_events]]
         std_ES = [np.std(ES) for ES in data_arrays['ES'][gamma_like_events]]
 
+        sum_loss = [np.sum(losses) for losses in data_arrays['loss'][gamma_like_events]]
+        av_loss = [np.average(losses) for losses in data_arrays['loss'][gamma_like_events]]
+        me_loss = [np.median(losses) for losses in data_arrays['loss'][gamma_like_events]]
+        std_loss = [np.std(losses) for losses in data_arrays['loss'][gamma_like_events]]
+
         av_asym = [np.average(asym) for asym in data_arrays['asym'][gamma_like_events]]
         me_asym = [np.median(asym) for asym in data_arrays['asym'][gamma_like_events]]
         std_asym = [np.std(asym) for asym in data_arrays['asym'][gamma_like_events]]
@@ -360,27 +363,6 @@ def extract_df_from_dl2(root_filename):
         av_tgrad_x = [np.average(tgrad_x) for tgrad_x in data_arrays['tgrad_x'][gamma_like_events]]
         me_tgrad_x = [np.median(tgrad_x) for tgrad_x in data_arrays['tgrad_x'][gamma_like_events]]
         std_tgrad_x = [np.std(tgrad_x) for tgrad_x in data_arrays['tgrad_x'][gamma_like_events]]
-
-        av_width = [np.average(width) for width in data_arrays['width'][gamma_like_events]]
-        me_width = [np.median(width) for width in data_arrays['width'][gamma_like_events]]
-        std_width = [np.std(width) for width in data_arrays['width'][gamma_like_events]]
-
-        av_length = [np.average(length) for length in data_arrays['length'][gamma_like_events]]
-        me_length = [np.median(length) for length in data_arrays['length'][gamma_like_events]]
-        std_length = [np.std(length) for length in data_arrays['length'][gamma_like_events]]
-
-        av_dispCombine = [
-            np.average(disp_error_weight(disp_error))
-            for disp_error in data_arrays['DispWoff_T'][gamma_like_events]
-        ]
-        me_dispCombine = [
-            np.median(disp_error_weight(disp_error))
-            for disp_error in data_arrays['DispWoff_T'][gamma_like_events]
-        ]
-        std_dispCombine = [
-            np.std(disp_error_weight(disp_error))
-            for disp_error in data_arrays['DispWoff_T'][gamma_like_events]
-        ]
 
         data_dict['runNumber'].extend(tuple(runNumber))
         data_dict['eventNumber'].extend(tuple(eventNumber))
@@ -400,7 +382,6 @@ def extract_df_from_dl2(root_filename):
         data_dict['log_EmissionHeightChi2'].extend(tuple(np.log10(EmissionHeightChi2)))
         data_dict['log_DispDiff'].extend(tuple(np.log10(DispDiff)))
         data_dict['log_dESabs'].extend(tuple(np.log10(dESabs)))
-        data_dict['loss_sum'].extend(tuple(loss_sum))
         data_dict['NTrig'].extend(tuple(NTrig))
         data_dict['meanPedvar_Image'].extend(tuple(meanPedvar_Image))
         data_dict['MSWOL'].extend(tuple(MSCW/MSCL))
@@ -429,6 +410,11 @@ def extract_df_from_dl2(root_filename):
         data_dict['me_ES'].extend(tuple(me_ES))
         data_dict['std_ES'].extend(tuple(std_ES))
 
+        data_dict['sum_loss'].extend(tuple(sum_loss))
+        data_dict['av_loss'].extend(tuple(av_loss))
+        data_dict['me_loss'].extend(tuple(me_loss))
+        data_dict['std_loss'].extend(tuple(std_loss))
+
         data_dict['av_asym'].extend(tuple(av_asym))
         data_dict['me_asym'].extend(tuple(me_asym))
         data_dict['std_asym'].extend(tuple(std_asym))
@@ -436,18 +422,6 @@ def extract_df_from_dl2(root_filename):
         data_dict['av_tgrad_x'].extend(tuple(av_tgrad_x))
         data_dict['me_tgrad_x'].extend(tuple(me_tgrad_x))
         data_dict['std_tgrad_x'].extend(tuple(std_tgrad_x))
-
-        data_dict['av_width'].extend(tuple(av_width))
-        data_dict['me_width'].extend(tuple(me_width))
-        data_dict['std_width'].extend(tuple(std_width))
-
-        data_dict['av_length'].extend(tuple(av_length))
-        data_dict['me_length'].extend(tuple(me_length))
-        data_dict['std_length'].extend(tuple(std_length))
-
-        data_dict['av_dispCombine'].extend(tuple(av_dispCombine))
-        data_dict['me_dispCombine'].extend(tuple(me_dispCombine))
-        data_dict['std_dispCombine'].extend(tuple(std_dispCombine))
 
     return pd.DataFrame(data=data_dict)
 
@@ -667,18 +641,6 @@ def define_regressors():
     regressors = dict()
 
     regressors['random_forest'] = RandomForestRegressor(n_estimators=300, random_state=0, n_jobs=8)
-    regressors['MLP'] = make_pipeline(
-        preprocessing.QuantileTransformer(output_distribution='normal', random_state=0),
-        MLPRegressor(
-            hidden_layer_sizes=(80, 45),
-            solver='adam',
-            max_iter=20000,
-            activation='tanh',
-            tol=1e-5,
-            # early_stopping=True,
-            random_state=0
-        )
-    )
     regressors['MLP_relu'] = make_pipeline(
         preprocessing.QuantileTransformer(output_distribution='normal', random_state=0),
         MLPRegressor(
@@ -715,7 +677,7 @@ def define_regressors():
             random_state=0
         )
     )
-    regressors['MLP_small'] = make_pipeline(
+    regressors['MLP_tanh'] = make_pipeline(
         preprocessing.QuantileTransformer(output_distribution='normal', random_state=0),
         MLPRegressor(
             hidden_layer_sizes=(36, 6),
@@ -741,7 +703,11 @@ def define_regressors():
     )
     regressors['BDT'] = AdaBoostRegressor(
         DecisionTreeRegressor(max_depth=30, random_state=0),
-        n_estimators=1000, random_state=0
+        n_estimators=100, random_state=0
+    )
+    regressors['BDT_small'] = AdaBoostRegressor(
+        DecisionTreeRegressor(max_depth=30, random_state=0),
+        n_estimators=30, random_state=0
     )
     regressors['linear_regression'] = LinearRegression(n_jobs=4)
     regressors['ridge'] = Ridge(alpha=1.0)
@@ -784,7 +750,7 @@ def define_classifiers():
     classifiers['MLP_classifier'] = make_pipeline(
         preprocessing.QuantileTransformer(output_distribution='normal', random_state=0),
         MLPClassifier(
-            hidden_layer_sizes=(80, 45),
+            hidden_layer_sizes=(36, 6),
             solver='adam',
             max_iter=20000,
             activation='tanh',
@@ -821,18 +787,6 @@ def define_classifiers():
         preprocessing.QuantileTransformer(output_distribution='uniform', random_state=0),
         MLPClassifier(
             hidden_layer_sizes=(80, 45),
-            solver='adam',
-            max_iter=20000,
-            activation='tanh',
-            tol=1e-5,
-            # early_stopping=True,
-            random_state=0
-        )
-    )
-    classifiers['MLP_small_classifier'] = make_pipeline(
-        preprocessing.QuantileTransformer(output_distribution='normal', random_state=0),
-        MLPClassifier(
-            hidden_layer_sizes=(36, 6),
             solver='adam',
             max_iter=20000,
             activation='tanh',
@@ -1102,6 +1056,7 @@ def load_models(model_names=list()):
     trained_models = defaultdict(dict)
 
     for model_name in model_names:
+        print('Loading the {} model'.format(model_name))
         models_dir = Path('models').joinpath(model_name)
         for this_file in sorted(models_dir.iterdir(), key=os.path.getmtime):
 

@@ -41,13 +41,13 @@ if __name__ == '__main__':
     selected_models = [
         # 'linear_regression',
         # 'random_forest',  # Do not use, performs bad and takes lots of disk space
-        # 'MLP',
+        # 'MLP_tanh',
         # 'MLP_relu',
         # 'MLP_logistic',
         # 'MLP_uniform',
-        'MLP_small',
         # 'MLP_lbfgs',
         # 'BDT',  # Do not use, performs bad and takes lots of disk space
+        'BDT_small',  # Do not use, performs bad and takes lots of disk space
         # 'ridge',
         # 'SVR',  # Do not use, performs bad and takes forever to apply
         # 'linear_SVR',

@@ -18,16 +18,16 @@ if __name__ == '__main__':
 
     plot_scores = True
     plot_confusion_matrix = True
+    plot_1d_conf_matrix = False
     n_types = 3
 
     Path('plots').mkdir(parents=True, exist_ok=True)
 
     models_to_compare = [
-        # 'MLP_classifier',
+        'MLP_classifier',
         # 'MLP_relu_classifier',
         # 'MLP_logistic_classifier',
         # 'MLP_uniform_classifier',
-        'MLP_small_classifier',
         # 'MLP_small_classifier',
         # 'random_forest_classifier',
         # 'BDT_classifier',
@@ -59,7 +59,7 @@ if __name__ == '__main__':
         dtf_e_test = event_types.load_multi_test_dtfs(dataset_names)
 
         if plot_scores:
-            plt = event_types.plot_score_comparison(dtf_e_test, trained_models)
+            plt, scores = event_types.plot_score_comparison(dtf_e_test, trained_models)
             plt.savefig('plots/scores_features_classifier_n_types_{}_{}.pdf'.format(
                 n_types,
                 i_group + 1
@@ -71,6 +71,7 @@ if __name__ == '__main__':
                 )
             )
             plt.clf()
+            event_types.save_scores(scores)
 
         if plot_confusion_matrix:
 
@@ -97,19 +98,21 @@ if __name__ == '__main__':
 
                 plt.clf()
 
-                plt = event_types.plot_1d_confusion_matrix(
-                    this_event_types,
-                    this_trained_model_name,
-                    n_types
-                )
+                if plot_1d_conf_matrix:
 
-                plt.savefig('plots/{}_1d_confusion_matrix_n_types_{}.pdf'.format(
-                    this_trained_model_name,
-                    n_types
-                ))
-                plt.savefig('plots/{}_1d_confusion_matrix_n_types_{}.png'.format(
-                    this_trained_model_name,
-                    n_types
-                ))
+                    plt = event_types.plot_1d_confusion_matrix(
+                        this_event_types,
+                        this_trained_model_name,
+                        n_types
+                    )
 
-                plt.clf()
+                    plt.savefig('plots/{}_1d_confusion_matrix_n_types_{}.pdf'.format(
+                        this_trained_model_name,
+                        n_types
+                    ))
+                    plt.savefig('plots/{}_1d_confusion_matrix_n_types_{}.png'.format(
+                        this_trained_model_name,
+                        n_types
+                    ))
+
+                    plt.clf()
