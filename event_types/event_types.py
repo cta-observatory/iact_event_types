@@ -260,19 +260,18 @@ def extract_df_from_dl2(root_filename):
     branches = branches_to_read()
 
     particle_file = uproot.open(root_filename)
-    cuts = particle_file['fEventTreeCuts']
+    cuts = particle_file['DL2EventTree']
     cuts_arrays = cuts.arrays(expressions='CutClass', library='np')
 
     # Cut 1: Events surviving gamma/hadron separation and direction cuts:
     mask_gamma_like_and_direction = cuts_arrays['CutClass'] == 5
 
-    # Cut 2: Events surviving gamma/hadron separation cut and not direction cut:
+    # Cut 2: Events surviving gamma/hadron separation cut and not direction cut
     mask_gamma_like_no_direction = cuts_arrays['CutClass'] == 0
 
-    gamma_like_events_all = np.logical_or(
-        mask_gamma_like_and_direction,
-        mask_gamma_like_no_direction
-    )
+    # Cut 0: Events before gamma/hadron and direction cuts (classes 0, 5 and 7)
+    gamma_like_events_all = mask_gamma_like_no_direction | mask_gamma_like_and_direction
+    gamma_like_events_all = gamma_like_events_all | (cuts_arrays['CutClass'] == 7)
 
     step_size = 5000  # slightly optimized on my laptop
     data_dict = defaultdict(list)
@@ -289,6 +288,7 @@ def extract_df_from_dl2(root_filename):
                 print('Extracted {} events'.format(i_event * step_size))
 
         gamma_like_events = gamma_like_events_all[i_event * step_size:(i_event + 1) * step_size]
+        cut_class = cuts_arrays['CutClass'][i_event * step_size:(i_event + 1) * step_size]
         # Variables for training:
         mc_alt = (90 - data_arrays['MCze'][gamma_like_events]) * u.deg
         mc_az = (data_arrays['MCaz'][gamma_like_events]) * u.deg
@@ -366,6 +366,7 @@ def extract_df_from_dl2(root_filename):
 
         data_dict['runNumber'].extend(tuple(runNumber))
         data_dict['eventNumber'].extend(tuple(eventNumber))
+        data_dict['cut_class'].extend(tuple(cut_class))
         data_dict['log_ang_diff'].extend(tuple(np.log10(ang_diff.value)))
         data_dict['log_true_energy'].extend(tuple(np.log10(true_energy)))
         data_dict['log_reco_energy'].extend(tuple(np.log10(reco_energy)))
@@ -477,7 +478,7 @@ def load_dtf(suffix=''):
     return load(data_file_name)
 
 
-def bin_data_in_energy(dtf, n_bins=20):
+def bin_data_in_energy(dtf, n_bins=20, log_e_reco_bins=None, return_bins=False):
     '''
     Bin the data in dtf to n_bins with equal statistics.
 
@@ -489,6 +490,12 @@ def bin_data_in_energy(dtf, n_bins=20):
     n_bins: int, default=20
         The number of reconstructed energy bins to divide the data in.
 
+    log_e_reco_bins: array-like, None
+        In case it is not none, it will be used as the energy bins to divide the data sample
+
+    return_bins: bool
+        If true, the function will return the log_e_reco_bins used to bin the data.
+
     Returns
     -------
     A dictionary of DataFrames (keys=energy ranges, values=separated DataFrames).
@@ -496,7 +503,8 @@ def bin_data_in_energy(dtf, n_bins=20):
 
     dtf_e = dict()
 
-    log_e_reco_bins = mstats.mquantiles(dtf['log_reco_energy'].values, np.linspace(0, 1, n_bins))
+    if log_e_reco_bins is None:
+        log_e_reco_bins = mstats.mquantiles(dtf['log_reco_energy'].values, np.linspace(0, 1, n_bins))
 
     for i_e_bin, log_e_high in enumerate(log_e_reco_bins):
         if i_e_bin == 0:
@@ -516,8 +524,10 @@ def bin_data_in_energy(dtf, n_bins=20):
         )
 
         dtf_e[this_e_range] = this_dtf
-
-    return dtf_e
+    if return_bins:
+        return dtf_e, log_e_reco_bins
+    else:
+        return dtf_e
 
 
 def extract_energy_bins(e_ranges):
@@ -549,7 +559,7 @@ def extract_energy_bins(e_ranges):
     return energy_bins
 
 
-def split_data_train_test(dtf_e, test_size=0.75):
+def split_data_train_test(dtf_e, test_size=0.75, random_state=75):
     '''
     Split the data into training and testing datasets.
     The data is split in each energy range separately with 'test_size'
@@ -564,6 +574,8 @@ def split_data_train_test(dtf_e, test_size=0.75):
         If float, should be between 0.0 and 1.0 and represents the proportion of the dataset
         to include in the test split. If int, represents the absolute number of test samples.
         If None it will be set to 0.25.
+    random_state: int
+
 
     Returns
     -------
@@ -578,7 +590,7 @@ def split_data_train_test(dtf_e, test_size=0.75):
         dtf_e_train[this_e_range], dtf_e_test[this_e_range] = model_selection.train_test_split(
             this_dtf,
             test_size=test_size,
-            random_state=0
+            random_state=random_state
         )
 
     return dtf_e_train, dtf_e_test
@@ -1135,9 +1147,12 @@ def partition_event_types(dtf_e_test, trained_models, n_types=2, type_bins='equa
     for model_name, model in trained_models.items():
 
         event_types[model_name] = dict()
-
+        print("Testing model {}".format(model_name))
         for this_e_range, this_model in model.items():
-
+            # In case a data file does not contain a specific energy bin:
+            if this_e_range not in dtf_e_test.keys():
+                continue
+            print("Bin {}".format(this_e_range))
             event_types[model_name][this_e_range] = defaultdict(list)
             event_types[model_name][this_e_range] = defaultdict(list)
 
@@ -1145,8 +1160,15 @@ def partition_event_types(dtf_e_test, trained_models, n_types=2, type_bins='equa
             dtf_this_e = dtf_e_test[this_model['test_data_suffix']][this_e_range]
 
             X_test = dtf_this_e[this_model['train_features']].values
-            y_pred = this_model['model'].predict(X_test)
+            # Check if any value is inf (found one on a proton file...). If true, change it to a big negative or
+            # positive value.
+            if np.any(np.isinf(X_test)):
+                # Remove positive infs
+                X_test[X_test > 999999] = 999999
+                # Remove negative infs
+                X_test[X_test < -999999] = -999999
 
+            y_pred = this_model['model'].predict(X_test)
             event_types_bins = mstats.mquantiles(
                 y_pred,
                 type_bins
