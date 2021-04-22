@@ -22,18 +22,19 @@ if __name__ == '__main__':
         # )
         # Prod5
         dl2_file_name = (
-            '/lustre/fs22/group/cta/users/maierg/analysis/AnalysisData/'
-            'prod5-Paranal-20deg-sq08-LL/EffectiveAreas/'
-            'EffectiveArea-50h-ID0-NIM2LST2MST2SST2SCMST2-g20210921-V3/BDT.DL2.50h-V3.g20210921/'
+            '/home/thassan/Paquetes/last_version/iact_event_types/eventDisplay_files/'
             'gamma_onSource.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0.root'
         )
         dtf = event_types.extract_df_from_dl2(dl2_file_name)
     else:
-        dtf = event_types.load_dtf()
+        dtf = event_types.load_dtf('gamma_onSource.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0.root')
+
+    # For the training, make sure we do not use events with cut_class == 7 (non gamma-like events)
+    dtf = dtf[dtf['cut_class'] != 7]
 
     dtf_e = event_types.bin_data_in_energy(dtf)
 
-    dtf_e_train, dtf_e_test = event_types.split_data_train_test(dtf_e)
+    dtf_e_train, dtf_e_test = event_types.split_data_train_test(dtf_e, random_state=777)
 
     labels, train_features = event_types.nominal_labels_train_features()
 
