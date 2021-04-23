@@ -18,9 +18,9 @@ if __name__ == '__main__':
 
     labels, train_features = event_types.nominal_labels_train_features()
 
-    plot_predict_dist = False
+    plot_predict_dist = True
     plot_scores = True
-    plot_confusion_matrix = False
+    plot_confusion_matrix = True
     plot_1d_conf_matrix = False
     n_types = 3
     type_bins = list(np.linspace(0, 1, n_types + 1))
@@ -31,7 +31,7 @@ if __name__ == '__main__':
     models_to_compare = [
         # 'linear_regression',
         # 'random_forest',
-        # 'MLP_tanh',
+        'MLP_tanh',
         # 'MLP_relu',
         'MLP_logistic',
         # 'MLP_uniform',
@@ -43,13 +43,7 @@ if __name__ == '__main__':
         # 'linear_SVR',
         # 'SGD',
     ]
-    models_to_compare = [
-        'test_size_55p',
-        'test_size_65p',
-        'test_size_75p',
-        'test_size_85p',
-        'test_size_95p',
-    ]
+
     if len(models_to_compare) > 1:
         group_models_to_compare = np.array_split(
             models_to_compare,

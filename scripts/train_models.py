@@ -22,12 +22,14 @@ if __name__ == '__main__':
         # )
         # Prod5
         dl2_file_name = (
-            '/home/thassan/Paquetes/last_version/iact_event_types/eventDisplay_files/'
+            '/lustre/fs22/group/cta/users/maierg/analysis/'
+            'AnalysisData/prod5-Paranal-20deg-sq10-LL/EffectiveAreas/'
+            'EffectiveArea-50h-ID0-NIM2LST2MST2SST2SCMST2-g20210921-V3/BDT.50h-V3.g20210921/'
             'gamma_onSource.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0.root'
         )
         dtf = event_types.extract_df_from_dl2(dl2_file_name)
     else:
-        dtf = event_types.load_dtf('gamma_onSource.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0.root')
+        dtf = event_types.load_dtf('gamma_onSource.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0')
 
     # For the training, make sure we do not use events with cut_class == 7 (non gamma-like events)
     dtf = dtf[dtf['cut_class'] != 7]
@@ -42,13 +44,13 @@ if __name__ == '__main__':
     selected_models = [
         # 'linear_regression',
         # 'random_forest',  # Do not use, performs bad and takes lots of disk space
-        # 'MLP_tanh',
+        'MLP_tanh',
         # 'MLP_relu',
-        # 'MLP_logistic',
+        'MLP_logistic',
         # 'MLP_uniform',
         # 'MLP_lbfgs',
         # 'BDT',  # Do not use, performs bad and takes lots of disk space
-        'BDT_small',  # Do not use, performs bad and takes lots of disk space
+        # 'BDT_small',  # Do not use, performs bad and takes lots of disk space
         # 'ridge',
         # 'SVR',  # Do not use, performs bad and takes forever to apply
         # 'linear_SVR',
