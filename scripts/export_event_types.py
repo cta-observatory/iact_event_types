@@ -24,7 +24,10 @@ if __name__ == '__main__':
     selected_model = 'MLP_logistic'
 
     trained_models = event_types.load_models([selected_model])
-    log_e_reco_bins = None
+    # Get the energy binning from the trained model
+    log_e_reco_bins = np.log10(
+        event_types.extract_energy_bins(trained_models[next(iter(trained_models))].keys())
+    )
 
     for dl2_file in dl2_file_list:
 
@@ -32,12 +35,7 @@ if __name__ == '__main__':
         dtf = event_types.load_dtf(dl2_file.replace('.root', ''))
         print('Total number of events: {}'.format(len(dtf)))
 
-        if 'gamma' in dl2_file:
-            dtf_e, log_e_reco_bins = event_types.bin_data_in_energy(dtf, return_bins=True)
-        else:
-            dtf_e = event_types.bin_data_in_energy(dtf, log_e_reco_bins=log_e_reco_bins)
-
-        print('Divided data into the following energy bins: {}'.format(dtf_e.keys()))
+        dtf_e = event_types.bin_data_in_energy(dtf, log_e_reco_bins=log_e_reco_bins)
 
         # Using a constant seed of 777, same as in the training/testing events
         if 'gamma' in dl2_file:
@@ -47,8 +45,12 @@ if __name__ == '__main__':
 
         # To match the format needed by partition_event_types
         dtf_e_test_formatted = {'default': dtf_e_test}
-        d_types = event_types.partition_event_types(dtf_e_test_formatted, trained_models, n_types=3,
-                                                    type_bins='equal statistics')
+        d_types = event_types.partition_event_types(
+            dtf_e_test_formatted,
+            trained_models,
+            n_types=3,
+            type_bins='equal statistics'
+        )
 
         # We add the event type value to each energy bin within the test sample
         for energy_key in dtf_e_test.keys():
@@ -59,7 +61,9 @@ if __name__ == '__main__':
         for energy_key in dtf_e_test.keys():
             if 'gamma' in dl2_file:
                 dtf.loc[dtf_e_train[energy_key].index.values, 'event_type'] = -1
-            dtf.loc[dtf_e_test[energy_key].index.values, 'event_type'] = d_types[selected_model][energy_key]['reco']
+            dtf.loc[dtf_e_test[energy_key].index.values, 'event_type'] = (
+                d_types[selected_model][energy_key]['reco']
+            )
 
         with open(dl2_file.replace('.root', '.txt'), 'w') as txt_file:
             for value in dtf['event_type']:

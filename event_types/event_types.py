@@ -491,7 +491,6 @@ def bin_data_in_energy(dtf, n_bins=20, log_e_reco_bins=None, return_bins=False):
         Must contain a 'log_reco_energy' column (used to calculate the bins).
     n_bins: int, default=20
         The number of reconstructed energy bins to divide the data in.
-
     log_e_reco_bins: array-like, None
         In case it is not none, it will be used as the energy bins to divide the data sample
 
@@ -506,7 +505,10 @@ def bin_data_in_energy(dtf, n_bins=20, log_e_reco_bins=None, return_bins=False):
     dtf_e = dict()
 
     if log_e_reco_bins is None:
-        log_e_reco_bins = mstats.mquantiles(dtf['log_reco_energy'].values, np.linspace(0, 1, n_bins))
+        log_e_reco_bins = mstats.mquantiles(
+            dtf['log_reco_energy'].values,
+            np.linspace(0, 1, n_bins)
+        )
 
     for i_e_bin, log_e_high in enumerate(log_e_reco_bins):
         if i_e_bin == 0:
@@ -517,13 +519,13 @@ def bin_data_in_energy(dtf, n_bins=20, log_e_reco_bins=None, return_bins=False):
             dtf['log_reco_energy'] < log_e_high
         )
         this_dtf = dtf[mask]
-        if len(this_dtf) < 1:
-            raise RuntimeError('One of the energy bins is empty')
 
         this_e_range = '{:3.3f} < E < {:3.3f} TeV'.format(
             10**log_e_reco_bins[i_e_bin - 1],
             10**log_e_high
         )
+        if len(this_dtf) < 1:
+            raise RuntimeError('The range {} is empty'.format(this_e_range))
 
         dtf_e[this_e_range] = this_dtf
     if return_bins:
@@ -546,7 +548,7 @@ def extract_energy_bins(e_ranges):
     Returns
     -------
     energy_bins: list of floats
-        Energy bins calculated as the averages of the energy ranges in e_ranges.
+        List of energy bin edges given in e_ranges.
     '''
 
     energy_bins = list()
@@ -554,11 +556,40 @@ def extract_energy_bins(e_ranges):
     for this_range in e_ranges:
 
         low_e = float(this_range.split()[0])
-        high_e = float(this_range.split()[4])
+        energy_bins.append(low_e)
 
-        energy_bins.append((high_e + low_e)/2.)
+    energy_bins.append(float(list(e_ranges)[-1].split()[4]))  # Add also the upper bin edge
 
     return energy_bins
+
+
+def extract_energy_bins_centers(e_ranges):
+    '''
+    Extract the energy bins from the list of energy ranges.
+    This is a little weird function which can probably be avoided if we use a class
+    instead of a namespace. However, it is useful for now so...
+
+    Parameters
+    ----------
+    e_ranges: list of str
+        A list of energy ranges in string form as '{:3.3f} < E < {:3.3f} TeV'.
+
+    Returns
+    -------
+    energy_bin_centers: list of floats
+        Energy bins calculated as the averages of the energy ranges in e_ranges.
+    '''
+
+    energy_bin_centers = list()
+
+    for this_range in e_ranges:
+
+        low_e = float(this_range.split()[0])
+        high_e = float(this_range.split()[4])
+
+        energy_bin_centers.append((high_e + low_e)/2.)
+
+    return energy_bin_centers
 
 
 def split_data_train_test(dtf_e, test_size=0.75, random_state=75):
@@ -1539,7 +1570,7 @@ def plot_score_comparison(dtf_e_test, trained_models):
     fig, ax = plt.subplots(figsize=(8, 6))
 
     scores = defaultdict(dict)
-    energy_bins = extract_energy_bins(trained_models[next(iter(trained_models))].keys())
+    energy_bins = extract_energy_bins_centers(trained_models[next(iter(trained_models))].keys())
 
     for this_model_name, trained_model in trained_models.items():
 
