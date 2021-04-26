@@ -31,20 +31,19 @@ if __name__ == '__main__':
     models_to_compare = [
         # 'linear_regression',
         # 'random_forest',
-        # 'MLP',
+        'MLP_tanh',
         # 'MLP_relu',
-        # 'MLP_logistic',
+        'MLP_logistic',
         # 'MLP_uniform',
-        'MLP_small',
         # 'MLP_lbfgs',
         # 'BDT',
+        # 'BDT_small',
         # 'ridge',
         # 'SVR',
         # 'linear_SVR',
         # 'SGD',
-        # 'MLP_small_less_vars',
-        # 'MLP_meanPedvar_av_cross_O',
     ]
+
     if len(models_to_compare) > 1:
         group_models_to_compare = np.array_split(
             models_to_compare,
