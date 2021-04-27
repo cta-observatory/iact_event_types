@@ -1118,7 +1118,8 @@ def load_models(model_names=list()):
     return trained_models
 
 
-def partition_event_types(dtf_e_test, trained_models, n_types=2, type_bins='equal statistics'):
+def partition_event_types(dtf_e_test, trained_models, n_types=2, type_bins='equal statistics',
+                          return_partition=False, event_type_bins=None):
     '''
     Divide the events into n_types event types.
     The bins defining the types are calculated from the predicted label values.
@@ -1152,7 +1153,14 @@ def partition_event_types(dtf_e_test, trained_models, n_types=2, type_bins='equa
         into three bins, best 20%, middle 60% and worst 20%.
         The list must be n_types + 1 long and the first and last values must be zero and one.
         The default is equal statistics bins, given as the default string.
-
+    return_partition: Bool
+        If true, a dictionary containing the partition values used for each model and each energy bin will
+        be returned.
+    event_type_bins: a nested dict of partition values per trained model and energy range
+        1st dict:
+            keys=model names, values=2nd dict
+        2nd dict:
+            keys=energy ranges, values=partition values array
     Returns
     -------
     event_types: nested dict
@@ -1177,9 +1185,14 @@ def partition_event_types(dtf_e_test, trained_models, n_types=2, type_bins='equa
     else:
         pass
 
+    if return_partition:
+        event_type_bins = dict()
+
     for model_name, model in trained_models.items():
 
         event_types[model_name] = dict()
+        if return_partition:
+            event_type_bins[model_name] = dict()
         print('Calculating event types for the {} model'.format(model_name))
         for this_e_range, this_model in model.items():
 
@@ -1203,6 +1216,13 @@ def partition_event_types(dtf_e_test, trained_models, n_types=2, type_bins='equa
                 y_pred,
                 type_bins
             )
+            # If return_partition == True, then store the event type bins into the container.
+            if return_partition:
+                event_type_bins[model_name][this_e_range] = event_types_bins
+            # If return_partition == False and a event_type_bins container was provided, then use the values from
+            # the container.
+            if not return_partition and event_type_bins is not None:
+                event_types_bins = event_type_bins[model_name][this_e_range]
 
             for this_value in y_pred:
                 this_event_type = np.searchsorted(event_types_bins, this_value)
@@ -1220,7 +1240,10 @@ def partition_event_types(dtf_e_test, trained_models, n_types=2, type_bins='equa
                     this_event_type = n_types
                 event_types[model_name][this_e_range]['true'].append(this_event_type)
 
-    return event_types
+    if return_partition:
+        return event_types, event_type_bins
+    else:
+        return event_types
 
 
 def predicted_event_types(dtf_e_test, trained_models, n_types=2):

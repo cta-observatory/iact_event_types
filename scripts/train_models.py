@@ -44,7 +44,7 @@ if __name__ == '__main__':
     selected_models = [
         # 'linear_regression',
         # 'random_forest',  # Do not use, performs bad and takes lots of disk space
-        'MLP_tanh',
+        # 'MLP_tanh',
         # 'MLP_relu',
         'MLP_logistic',
         # 'MLP_uniform',
