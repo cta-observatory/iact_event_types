@@ -36,7 +36,7 @@ if __name__ == '__main__':
     test_data_frac = dict()
     test_data_frac['test_size_55p'] = 0.55
     test_data_frac['test_size_65p'] = 0.65
-    # test_data_frac['test_size_75p'] = 0.75
+    test_data_frac['test_size_75p'] = 0.75
     test_data_frac['test_size_85p'] = 0.85
     test_data_frac['test_size_95p'] = 0.95
     # test_data_frac['test_size_99p'] = 0.99
@@ -47,7 +47,7 @@ if __name__ == '__main__':
         models_to_train[test_frac_name] = dict()
         models_to_train[test_frac_name]['train_features'] = train_features
         models_to_train[test_frac_name]['labels'] = labels
-        models_to_train[test_frac_name]['model'] = all_models['MLP_small']
+        models_to_train[test_frac_name]['model'] = all_models['MLP_logistic']
         models_to_train[test_frac_name]['test_data_suffix'] = test_frac_name
 
         dtf_e_train, dtf_e_test = event_types.split_data_train_test(dtf_e, test_size=test_frac)

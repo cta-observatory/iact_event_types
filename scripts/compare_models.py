@@ -21,41 +21,29 @@ if __name__ == '__main__':
     plot_predict_dist = True
     plot_scores = True
     plot_confusion_matrix = True
+    plot_1d_conf_matrix = False
     n_types = 3
     type_bins = list(np.linspace(0, 1, n_types + 1))
     # type_bins = [0, 0.2, 0.8, 1]
 
     Path('plots').mkdir(parents=True, exist_ok=True)
 
-    # models_to_compare = [
-    #     # 'linear_regression',
-    #     # 'random_forest',
-    #     # 'MLP',
-    #     # 'MLP_relu',
-    #     # 'MLP_logistic',
-    #     # 'MLP_uniform',
-    #     'MLP_small',
-    #     # 'MLP_lbfgs',
-    #     # 'BDT',
-    #     # 'ridge',
-    #     # 'SVR',
-    #     # 'linear_SVR',
-    #     # 'SGD',
-    #     # 'MLP_small_less_vars',
-    #     # 'MLP_meanPedvar_av_cross_O',
-    # ]
-    # models_to_compare = ['MLP_{}'.format(var) for var in train_features]
-    # models_to_compare = ['All', 'features_1', 'features_2', 'features_3', 'features_4']
-    # models_to_compare = ['All', 'features_5', 'features_6', 'features_7', 'features_8']
-    # models_to_compare = ['All', 'no_asym', 'no_tgrad_x', 'no_asym_tgrad_x']
-    # models_to_compare = ['All']
     models_to_compare = [
-        'test_size_55p',
-        'test_size_65p',
-        'test_size_75p',
-        'test_size_85p',
-        'test_size_95p',
+        # 'linear_regression',
+        # 'random_forest',
+        'MLP_tanh',
+        # 'MLP_relu',
+        'MLP_logistic',
+        # 'MLP_uniform',
+        # 'MLP_lbfgs',
+        # 'BDT',
+        # 'BDT_small',
+        # 'ridge',
+        # 'SVR',
+        # 'linear_SVR',
+        # 'SGD',
     ]
+
     if len(models_to_compare) > 1:
         group_models_to_compare = np.array_split(
             models_to_compare,
@@ -85,10 +73,11 @@ if __name__ == '__main__':
             plt.clf()
 
         if plot_scores:
-            plt = event_types.plot_score_comparison(dtf_e_test, trained_models)
+            plt, scores = event_types.plot_score_comparison(dtf_e_test, trained_models)
             plt.savefig('plots/scores_features_{}.pdf'.format(i_group + 1))
             plt.savefig('plots/scores_features_{}.png'.format(i_group + 1))
             plt.clf()
+            event_types.save_scores(scores)
 
         if plot_confusion_matrix:
 
@@ -114,19 +103,21 @@ if __name__ == '__main__':
                     n_types
                 ))
 
-                plt = event_types.plot_1d_confusion_matrix(
-                    this_event_types,
-                    this_trained_model_name,
-                    n_types
-                )
+                if plot_1d_conf_matrix:
 
-                plt.savefig('plots/{}_1d_confusion_matrix_n_types_{}.pdf'.format(
-                    this_trained_model_name,
-                    n_types
-                ))
-                plt.savefig('plots/{}_1d_confusion_matrix_n_types_{}.png'.format(
-                    this_trained_model_name,
-                    n_types
-                ))
+                    plt = event_types.plot_1d_confusion_matrix(
+                        this_event_types,
+                        this_trained_model_name,
+                        n_types
+                    )
+
+                    plt.savefig('plots/{}_1d_confusion_matrix_n_types_{}.pdf'.format(
+                        this_trained_model_name,
+                        n_types
+                    ))
+                    plt.savefig('plots/{}_1d_confusion_matrix_n_types_{}.png'.format(
+                        this_trained_model_name,
+                        n_types
+                    ))
 
                 plt.clf()
