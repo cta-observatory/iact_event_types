@@ -29,14 +29,24 @@ if __name__ == '__main__':
         )
         dtf = event_types.extract_df_from_dl2(dl2_file_name)
     else:
-        dtf = event_types.load_dtf('gamma_onSource.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0')
+        # Prod5 baseline (do not use anymore)
+        # dtf = event_types.load_dtf('gamma_onSource.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0')
+        dtf = event_types.load_dtf('gamma_cone.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0')
+        # Prod5 Threshold (alpha?)
+        # dtf = event_types.load_dtf('gamma_onSource.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0')
 
     # For the training, make sure we do not use events with cut_class == 7 (non gamma-like events)
-    dtf = dtf[dtf['cut_class'] != 7]
+    # dtf = dtf[dtf['cut_class'] != 7].dropna()
+    # try once also using cut_class == 7 (non gamma-like events)
+    dtf = dtf.dropna()
 
     dtf_e = event_types.bin_data_in_energy(dtf)
 
-    dtf_e_train, dtf_e_test = event_types.split_data_train_test(dtf_e, random_state=777)
+    dtf_e_train, dtf_e_test = event_types.split_data_train_test(
+        dtf_e,
+        test_size=0.5,
+        random_state=777
+    )
 
     labels, train_features = event_types.nominal_labels_train_features()
 

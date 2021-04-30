@@ -21,7 +21,7 @@ if __name__ == '__main__':
         'proton_onSource.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0.root'
     ]
 
-    selected_model = 'MLP_logistic'
+    selected_model = 'MLP_tanh'
 
     trained_models = event_types.load_models([selected_model])
     # Get the energy binning from the trained model
