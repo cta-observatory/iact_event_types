@@ -1501,7 +1501,7 @@ def plot_test_vs_predict(dtf_e_test, trained_models, trained_model_name):
     return plt
 
 
-def plot_matrix(dtf, train_features, labels, n_types=2):
+def plot_matrix(dtf, train_features, labels, n_types=2, plot_events=20000):
     '''
     Plot a matrix of each variable in train_features against another (not all combinations).
     The data is divided to n_types bins of equal statistics based on the labels.
@@ -1519,8 +1519,9 @@ def plot_matrix(dtf, train_features, labels, n_types=2):
     labels: str
         Name of the variable used as the labels in the training.
     n_types: int (default=2)
-            The number of types to divide the data in.
-
+        The number of types to divide the data in.
+    plot_events: int (default=20000)
+        For efficiency, limit the number of events that will be used for the plots
 
     Returns
     -------
@@ -1529,8 +1530,12 @@ def plot_matrix(dtf, train_features, labels, n_types=2):
 
     setStyle()
 
-    dtf = add_event_type_column(dtf, labels, n_types)
+    # Check if event_type column already present within dtf:
+    if "event_type" not in dtf.columns:
+        dtf = add_event_type_column(dtf, labels, n_types)
 
+    # Mask out the events without a clear event type
+    dtf = dtf[dtf['event_type'] > 0]
     type_colors = {
         1: "#ba2c54",
         2: "#5B90DC",
@@ -1546,14 +1551,13 @@ def plot_matrix(dtf, train_features, labels, n_types=2):
     for these_vars in vars_to_plot:
         grid_plots.append(
             sns.pairplot(
-                dtf,
+                dtf.sample(n=plot_events),
                 vars=these_vars,
                 hue='event_type',
                 palette=type_colors,
                 corner=True
             )
         )
-
     return grid_plots
 
 

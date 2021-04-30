@@ -15,8 +15,14 @@ if __name__ == '__main__':
     dl2_file_list = [
                      # 'electron_onSource.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0.root',
                      # 'proton_onSource.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0.root',
-                     'gamma_onSource.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0.root',
-                    ]
+                     # 'gamma_onSource.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0.root',
+                     'gamma_cone.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0.root',
+                     # 'gamma_cone.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-1.root',
+                     # 'gamma_cone.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-2.root',
+                     # 'gamma_cone.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-3.root',
+                     # 'gamma_cone.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-4.root',
+                     # 'gamma_cone.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-5.root',
+    ]
     dl2_file_path = (
         '/lustre/fs22/group/cta/users/maierg/analysis/'
         'AnalysisData/prod5-Paranal-20deg-sq10-LL/EffectiveAreas/'
