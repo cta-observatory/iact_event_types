@@ -139,10 +139,8 @@ def branches_to_read():
         'runNumber',
         'eventNumber',
         'MCe0',
-        'MCze',
-        'MCaz',
-        'Ze',
-        'Az',
+        'MCxoff',
+        'MCyoff',
         'size',
         'ErecS',
         'NImages',
@@ -291,18 +289,12 @@ def extract_df_from_dl2(root_filename):
         cut_class = cuts_arrays['CutClass'][i_event * step_size:(i_event + 1) * step_size]
         cut_class = cut_class[gamma_like_events]
 
-        # Variables for training:
-        mc_alt = (90 - data_arrays['MCze'][gamma_like_events]) * u.deg
-        mc_az = (data_arrays['MCaz'][gamma_like_events]) * u.deg
-        reco_alt = (90 - data_arrays['Ze'][gamma_like_events]) * u.deg
-        reco_az = (data_arrays['Az'][gamma_like_events]) * u.deg
-        # Angular separation bewteen the true vs reconstructed direction
-        ang_diff = angular_separation(
-            mc_az,  # az
-            mc_alt,  # alt
-            reco_az,
-            reco_alt,
-        )
+        # Label to train with:
+        x_off = data_arrays['Xoff'][gamma_like_events]
+        y_off = data_arrays['Yoff'][gamma_like_events]
+        x_off_mc = data_arrays['MCxoff'][gamma_like_events]
+        y_off_mc = data_arrays['MCyoff'][gamma_like_events]
+        ang_diff = np.sqrt((x_off - x_off_mc)**2. + (y_off - y_off_mc)**2.)
 
         # Variables for training:
         runNumber = data_arrays['runNumber'][gamma_like_events]
@@ -313,9 +305,6 @@ def extract_df_from_dl2(root_filename):
         x_cores = data_arrays['Xcore'][gamma_like_events]
         y_cores = data_arrays['Ycore'][gamma_like_events]
         array_distance = np.sqrt(x_cores**2. + y_cores**2.)
-        x_off = data_arrays['Xoff'][gamma_like_events]
-        y_off = data_arrays['Yoff'][gamma_like_events]
-        camera_offset = np.sqrt(x_off**2. + y_off**2.)
         img2_ang = data_arrays['img2_ang'][gamma_like_events]
         EChi2S = data_arrays['EChi2S'][gamma_like_events]
         SizeSecondMax = data_arrays['SizeSecondMax'][gamma_like_events]
@@ -369,7 +358,7 @@ def extract_df_from_dl2(root_filename):
         data_dict['runNumber'].extend(tuple(runNumber))
         data_dict['eventNumber'].extend(tuple(eventNumber))
         data_dict['cut_class'].extend(tuple(cut_class))
-        data_dict['log_ang_diff'].extend(tuple(np.log10(ang_diff.value)))
+        data_dict['log_ang_diff'].extend(tuple(np.log10(ang_diff)))
         data_dict['log_true_energy'].extend(tuple(np.log10(true_energy)))
         data_dict['log_reco_energy'].extend(tuple(np.log10(reco_energy)))
         data_dict['log_NTels_reco'].extend(tuple(np.log10(NTels_reco)))
@@ -377,7 +366,6 @@ def extract_df_from_dl2(root_filename):
         data_dict['img2_ang'].extend(tuple(img2_ang))
         data_dict['log_EChi2S'].extend(tuple(np.log10(EChi2S)))
         data_dict['log_SizeSecondMax'].extend(tuple(np.log10(SizeSecondMax)))
-        data_dict['camera_offset'].extend(tuple(camera_offset))
         data_dict['log_NTelPairs'].extend(tuple(np.log10(NTelPairs)))
         data_dict['MSCW'].extend(tuple(MSCW))
         data_dict['MSCL'].extend(tuple(MSCL))
@@ -1469,6 +1457,12 @@ def plot_test_vs_predict(dtf_e_test, trained_models, trained_model_name):
         X_test = dtf_this_e[this_model['train_features']].values
         y_test = dtf_this_e[this_model['labels']].values
 
+        if np.any(np.isinf(X_test)):
+            # Remove positive infs
+            X_test[X_test > 999999] = 999999
+            # Remove negative infs
+            X_test[X_test < -999999] = -999999
+
         y_pred = this_model['model'].predict(X_test)
 
         ax = axs[int(np.floor((i_plot)/ncols)), (i_plot) % ncols]
@@ -1607,6 +1601,12 @@ def plot_score_comparison(dtf_e_test, trained_models):
 
             X_test = dtf_this_e[this_model['train_features']].values
             y_test = dtf_this_e[this_model['labels']].values
+
+            if np.any(np.isinf(X_test)):
+                # Remove positive infs
+                X_test[X_test > 999999] = 999999
+                # Remove negative infs
+                X_test[X_test < -999999] = -999999
 
             y_pred = this_model['model'].predict(X_test)
 
