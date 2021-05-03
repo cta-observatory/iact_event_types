@@ -231,6 +231,7 @@ def nominal_labels_train_features():
         'av_tgrad_x',
         'me_tgrad_x',
         'std_tgrad_x',
+        'camera_offset',
     ]
 
     return labels, train_features
@@ -301,6 +302,7 @@ def extract_df_from_dl2(root_filename):
         eventNumber = data_arrays['eventNumber'][gamma_like_events]
         reco_energy = data_arrays['ErecS'][gamma_like_events]
         true_energy = data_arrays['MCe0'][gamma_like_events]
+        camera_offset = np.sqrt(x_off**2. + y_off**2.)
         NTels_reco = data_arrays['NImages'][gamma_like_events]
         x_cores = data_arrays['Xcore'][gamma_like_events]
         y_cores = data_arrays['Ycore'][gamma_like_events]
@@ -361,6 +363,7 @@ def extract_df_from_dl2(root_filename):
         data_dict['log_ang_diff'].extend(tuple(np.log10(ang_diff)))
         data_dict['log_true_energy'].extend(tuple(np.log10(true_energy)))
         data_dict['log_reco_energy'].extend(tuple(np.log10(reco_energy)))
+        data_dict['camera_offset'].extend(tuple(camera_offset))
         data_dict['log_NTels_reco'].extend(tuple(np.log10(NTels_reco)))
         data_dict['array_distance'].extend(tuple(array_distance))
         data_dict['img2_ang'].extend(tuple(img2_ang))

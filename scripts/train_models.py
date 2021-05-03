@@ -34,13 +34,14 @@ if __name__ == '__main__':
         dtf = event_types.load_dtf('gamma_cone.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0')
         # Prod5 Threshold (alpha?)
         # dtf = event_types.load_dtf('gamma_onSource.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0')
+        # dtf = event_types.load_dtf('gamma_cone.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0')
 
     # For the training, make sure we do not use events with cut_class == 7 (non gamma-like events)
     # dtf = dtf[dtf['cut_class'] != 7].dropna()
-    # try once also using cut_class == 7 (non gamma-like events)
+    # try using cut_class == 7 (non gamma-like events)
     dtf = dtf.dropna()
 
-    dtf_e = event_types.bin_data_in_energy(dtf)
+    dtf_e = event_types.bin_data_in_energy(dtf, n_bins=20)
 
     dtf_e_train, dtf_e_test = event_types.split_data_train_test(
         dtf_e,
@@ -56,7 +57,7 @@ if __name__ == '__main__':
         # 'random_forest',  # Do not use, performs bad and takes lots of disk space
         'MLP_tanh',
         # 'MLP_relu',
-        'MLP_logistic',
+        # 'MLP_logistic',
         # 'MLP_uniform',
         # 'MLP_lbfgs',
         # 'BDT',  # Do not use, performs bad and takes lots of disk space
