@@ -30,8 +30,11 @@ if __name__ == '__main__':
 
     trained_model = event_types.load_models([selected_model])
     # Get the energy binning from the trained model
+    e_ranges = list(trained_model[next(iter(trained_model))].keys())
+    # Sometimes they do not come in order... Here we fix that case.
+    e_ranges.sort()
     log_e_reco_bins = np.log10(
-        event_types.extract_energy_bins(trained_model[next(iter(trained_model))].keys())
+        event_types.extract_energy_bins(e_ranges)
     )
 
     # This variable will store the event type partitioning container.
@@ -98,6 +101,16 @@ if __name__ == '__main__':
             dtf.loc[dtf_e_test[energy_key].index.values, 'event_type'] = (
                 d_types[selected_model][energy_key]['reco']
             )
+        # labels, train_features = event_types.nominal_labels_train_features()
+        # plot_list = event_types.plot_matrix(dtf, train_features, labels, n_types=3, plot_events=20000)
+        # for i, plot in enumerate(plot_list):
+        #     if "gamma" in dl2_file:
+        #         plot.savefig("gamma_features_{}.pdf".format(i))
+        #     elif "proton" in dl2_file:
+        #         plot.savefig("proton_features_{}.pdf".format(i))
+        #     elif "electron" in dl2_file:
+        #         plot.savefig("electron_features_{}.pdf".format(i))
+
         print("A total of {} events will be written.".format(len(dtf['event_type'])))
         print("A total of {} events were set as -99...".format(len(dtf[dtf['event_type'] == -99])))
 
