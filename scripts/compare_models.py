@@ -33,7 +33,7 @@ if __name__ == '__main__':
         # 'random_forest',
         'MLP_tanh',
         # 'MLP_relu',
-        'MLP_logistic',
+        # 'MLP_logistic',
         # 'MLP_uniform',
         # 'MLP_lbfgs',
         # 'BDT',
