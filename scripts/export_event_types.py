@@ -50,15 +50,16 @@ if __name__ == '__main__':
         dtf = event_types.load_dtf(dl2_file.replace('.root', ''))
         print('Total number of events: {}'.format(len(dtf)))
         if 'gamma' in dl2_file:
-            # We separate cut class 7, as it was not used for the model training, but will have associated
-            # event types too:
+            # We separate cut class 7. Even if it was used for the model training, we want to define the event-type
+            # thresholds only using gamma-like events:
             dtf_e = event_types.bin_data_in_energy(dtf[dtf['cut_class'] != 7], log_e_reco_bins=log_e_reco_bins)
             dtf_7_e = event_types.bin_data_in_energy(dtf[dtf['cut_class'] == 7], log_e_reco_bins=log_e_reco_bins)
         else:
             dtf_e = event_types.bin_data_in_energy(dtf, log_e_reco_bins=log_e_reco_bins)
 
-        # Using a constant seed of 777, same as in the training/testing events
+        # We only separate training statistics in case of exporting a gamma_cone file.
         if 'gamma_cone' in dl2_file:
+            # Using a constant seed of 777, same as in the training/testing events
             dtf_e_train, dtf_e_test = event_types.split_data_train_test(dtf_e, random_state=777)
         else:
             dtf_e_test = dtf_e
@@ -118,7 +119,8 @@ if __name__ == '__main__':
         #         plot.savefig("electron_features_{}.pdf".format(i))
 
         print("A total of {} events will be written.".format(len(dtf['event_type'])))
-        print("A total of {} events were set as -99...".format(len(dtf[dtf['event_type'] == -99])))
+        for event_type in np.unique(dtf['event_type']):
+            print("A total of {} events of type {}".format(len(dtf[dtf['event_type'] == event_type]), event_type))
 
         with open(dl2_file.replace('.root', '.txt'), 'w') as txt_file:
             for value in dtf['event_type']:
