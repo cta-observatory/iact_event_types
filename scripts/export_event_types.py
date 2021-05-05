@@ -18,9 +18,14 @@ if __name__ == '__main__':
     # List of DL2 files from which we want to export event types
     # IMPORTANT: Be aware that the gamma file goes first, as it will be used to calculate the event type threshlds.
     dl2_file_list = [
+        # Prod-5 full CTA-S array:
         'gamma_onSource.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0.root',
         'electron_onSource.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0.root',
         'proton_onSource.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0.root'
+        # Prod-5 CTA-S threshold array:
+        # 'gamma_onSource.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0.root',
+        # 'electron_onSource.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0.root',
+        # 'proton_onSource.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0.root'
     ]
     if "gamma" not in dl2_file_list[0]:
         raise ValueError("The first DL2 file to analyze must be the gamma file, as we need it to comput the" +

@@ -1201,6 +1201,9 @@ def partition_event_types(dtf_e_test, trained_models, n_types=2, type_bins='equa
                 X_test[X_test > 999999] = 999999
                 # Remove negative infs
                 X_test[X_test < -999999] = -999999
+            if np.any(np.isnan(X_test)):
+                # Remove nans
+                X_test[np.isnan(X_test)] = 99999
 
             y_pred = this_model['model'].predict(X_test)
             event_types_bins = mstats.mquantiles(
@@ -1453,7 +1456,6 @@ def plot_test_vs_predict(dtf_e_test, trained_models, trained_model_name):
     fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=[14, 18])
 
     for i_plot, (this_e_range, this_model) in enumerate(trained_models.items()):
-
         # To keep lines short
         dtf_this_e = dtf_e_test[this_model['test_data_suffix']][this_e_range]
 
@@ -1468,7 +1470,7 @@ def plot_test_vs_predict(dtf_e_test, trained_models, trained_model_name):
 
         y_pred = this_model['model'].predict(X_test)
 
-        ax = axs[int(np.floor((i_plot)/ncols)), (i_plot) % ncols]
+        ax = axs[int(np.floor(i_plot/ncols)), i_plot % ncols]
 
         ax.hist2d(y_pred, y_test, bins=(50, 50), cmap=plt.cm.jet)
         ax.plot(

@@ -45,7 +45,7 @@ if __name__ == '__main__':
 
     dtf_e_train, dtf_e_test = event_types.split_data_train_test(
         dtf_e,
-        test_size=0.5,
+        test_size=0.25,
         random_state=777
     )
 
