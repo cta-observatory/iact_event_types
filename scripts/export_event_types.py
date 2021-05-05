@@ -58,7 +58,7 @@ if __name__ == '__main__':
             dtf_e = event_types.bin_data_in_energy(dtf, log_e_reco_bins=log_e_reco_bins)
 
         # Using a constant seed of 777, same as in the training/testing events
-        if 'gamma' in dl2_file:
+        if 'gamma_cone' in dl2_file:
             dtf_e_train, dtf_e_test = event_types.split_data_train_test(dtf_e, random_state=777)
         else:
             dtf_e_test = dtf_e
@@ -99,7 +99,8 @@ if __name__ == '__main__':
         dtf['event_type'] = -99
         for energy_key in dtf_e_test.keys():
             if 'gamma' in dl2_file:
-                dtf.loc[dtf_e_train[energy_key].index.values, 'event_type'] = -1
+                if 'gamma_cone' in dl2_file:
+                    dtf.loc[dtf_e_train[energy_key].index.values, 'event_type'] = -1
                 dtf.loc[dtf_7_e[energy_key].index.values, 'event_type'] = (
                     d_types_7[selected_model][energy_key]['reco']
                 )
