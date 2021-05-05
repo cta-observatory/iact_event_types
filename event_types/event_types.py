@@ -1109,12 +1109,11 @@ def load_models(model_names=list()):
     return trained_models
 
 
-def partition_event_types(dtf_e_test, trained_models, n_types=2, type_bins='equal statistics',
-                          return_partition=False, event_type_bins=None):
+def add_predict_column(dtf_e_test, trained_models):
     '''
-    Divide the events into n_types event types.
-    The bins defining the types are calculated from the predicted label values.
-    Two lists of types are returned per model and per energy range, one true and one predicted.
+    Add a column to the test dataset with predicted label values.
+    Instead of returning the dataset as is divided into energy bins,
+    the energy binned datasets is combined into one dataset.
 
     Parameters
     ----------
@@ -1136,6 +1135,79 @@ def partition_event_types(dtf_e_test, trained_models, n_types=2, type_bins='equa
             'train_features': list of variable names trained with.
             'labels': name of the variable used as the labels in the training.
             'test_data_suffix': suffix of the test dataset saved to disk.
+
+    Returns
+    -------
+    dtf_test_squashed: a nested dict of test datasets per trained model
+        1st dict:
+            keys=test_data_suffix, values=2nd dict
+        2nd dict:
+            The pandas DataFrame containing the test data and an additional
+            column with prediction values. This DataFrame is a combination of the
+            energy binned DataFrames given as input
+    '''
+
+    dtf_test_squashed = dict()
+    list_of_dtfs = list()
+
+    for model_name, model in trained_models.items():
+
+        print('Calculating the predictions for the {} model'.format(model_name))
+
+        for this_e_range, this_model in model.items():
+
+            # To keep lines short
+            dtf_this_e = dtf_e_test[this_model['test_data_suffix']][this_e_range]
+            list_of_dtfs.append(dtf_this_e)
+
+            X_test = dtf_this_e[this_model['train_features']].values
+            # Check if any value is inf (found one on a proton file...).
+            # If true, change it to a big negative or positive value.
+            if np.any(np.isinf(X_test)):
+                # Remove positive infs
+                X_test[X_test > 999999] = 999999
+                # Remove negative infs
+                X_test[X_test < -999999] = -999999
+            if np.any(np.isnan(X_test)):
+                # Remove nans
+                X_test[np.isnan(X_test)] = 99999
+
+            y_pred = this_model['model'].predict(X_test)
+
+            dtf_this_e.loc[:, 'y_pred'] = y_pred
+
+        dtf_test_squashed[this_model['test_data_suffix']] = pd.concat(list_of_dtfs)
+
+    return dtf_test_squashed
+
+
+def partition_event_types(
+    dtf_test,
+    labels,
+    log_e_bins,
+    n_types=2,
+    type_bins='equal statistics',
+    return_partition=False,
+    event_type_bins=None
+):
+    '''
+    Divide the events into n_types event types in each energy bin.
+    The bins defining the types are calculated from the predicted label values,
+    assumed to be included already in dtf_test.
+    Two lists of types are returned per model and per energy range, one true and one predicted.
+
+    Parameters
+    ----------
+    dtf_test: a nested dict of test datasets per trained model
+        1st dict:
+            keys=test_data_suffix, values=2nd dict
+        2nd dict:
+            Pandas DataFrames containing the test data and a column with the predicted values.
+    labels: string
+        The name of the label column used to train with.
+    log_e_reco_bins: array like
+        A list of energy bins in which to divide the data into types.
+        The bins are assumed to be the log values of the energy in TeV.
     n_types: int (default=2)
         The number of types to divide the data in.
     type_bins: list of floats or str
@@ -1145,8 +1217,8 @@ def partition_event_types(dtf_e_test, trained_models, n_types=2, type_bins='equa
         The list must be n_types + 1 long and the first and last values must be zero and one.
         The default is equal statistics bins, given as the default string.
     return_partition: Bool
-        If true, a dictionary containing the partition values used for each model and each energy bin will
-        be returned.
+        If true, a dictionary containing the partition values used for each model
+        and each energy bin will be returned.
     event_type_bins: a nested dict of partition values per trained model and energy range
         1st dict:
             keys=model names, values=2nd dict
@@ -1158,7 +1230,7 @@ def partition_event_types(dtf_e_test, trained_models, n_types=2, type_bins='equa
         1st dict:
             keys=model names, values=2nd dict
         2nd dict:
-            keys=energy ranges, values=3rddict
+            keys=energy ranges, values=3rd dict
         3rd dict:
             keys=true or reco, values=event type
     '''
@@ -1179,46 +1251,36 @@ def partition_event_types(dtf_e_test, trained_models, n_types=2, type_bins='equa
     if return_partition:
         event_type_bins = dict()
 
-    for model_name, model in trained_models.items():
+    for model_name, this_dtf in dtf_test.items():
 
         event_types[model_name] = dict()
         if return_partition:
             event_type_bins[model_name] = dict()
+
         print('Calculating event types for the {} model'.format(model_name))
-        for this_e_range, this_model in model.items():
+
+        dtf_e_test = bin_data_in_energy(this_dtf, log_e_reco_bins=log_e_bins)
+
+        for this_e_range, dtf_this_e in dtf_e_test.items():
 
             event_types[model_name][this_e_range] = defaultdict(list)
             event_types[model_name][this_e_range] = defaultdict(list)
 
-            # To keep lines short
-            dtf_this_e = dtf_e_test[this_model['test_data_suffix']][this_e_range]
-
-            X_test = dtf_this_e[this_model['train_features']].values
-            # Check if any value is inf (found one on a proton file...).
-            # If true, change it to a big negative or positive value.
-            if np.any(np.isinf(X_test)):
-                # Remove positive infs
-                X_test[X_test > 999999] = 999999
-                # Remove negative infs
-                X_test[X_test < -999999] = -999999
-            if np.any(np.isnan(X_test)):
-                # Remove nans
-                X_test[np.isnan(X_test)] = 99999
-
-            y_pred = this_model['model'].predict(X_test)
             event_types_bins = mstats.mquantiles(
-                y_pred,
+                dtf_this_e['y_pred'],
                 type_bins
             )
-            # If return_partition == True, then store the event type bins into the container.
+
+            # If return_partition is True, then store the event type bins into the container.
             if return_partition:
                 event_type_bins[model_name][this_e_range] = event_types_bins
-            # If return_partition == False and a event_type_bins container was provided, then use the values from
-            # the container.
+            # If return_partition is False and a event_type_bins container was provided,
+            # then use the values from the container.
+
             if not return_partition and event_type_bins is not None:
                 event_types_bins = event_type_bins[model_name][this_e_range]
 
-            for this_value in y_pred:
+            for this_value in dtf_this_e['y_pred']:
                 this_event_type = np.searchsorted(event_types_bins, this_value)
                 if this_event_type < 1:
                     this_event_type = 1
@@ -1226,7 +1288,7 @@ def partition_event_types(dtf_e_test, trained_models, n_types=2, type_bins='equa
                     this_event_type = n_types
                 event_types[model_name][this_e_range]['reco'].append(this_event_type)
 
-            for this_value in dtf_this_e[this_model['labels']].values:
+            for this_value in dtf_this_e[labels].values:
                 this_event_type = np.searchsorted(event_types_bins, this_value)
                 if this_event_type < 1:
                     this_event_type = 1
