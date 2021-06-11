@@ -37,6 +37,9 @@ if __name__ == '__main__':
         # Prod5 Threshold (beta)
         # dtf = event_types.load_dtf('gamma_onSource.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0')
         dtf = event_types.load_dtf('gamma_cone.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0')
+        # Prod5 north (beta?)
+        # dtf = event_types.load_dtf('gamma_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0')
+        # dtf = event_types.load_dtf('gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0')
 
     # For the training, make sure we do not use events with cut_class == 7 (non gamma-like events)
     # dtf = dtf[dtf['cut_class'] != 7].dropna()
@@ -55,17 +58,17 @@ if __name__ == '__main__':
 
     all_models = event_types.define_regressors()
     selected_models = [
-        # 'linear_regression',
+        'linear_regression',
+        # 'BDT',  # Do not use, performs bad and takes lots of disk space
+        # 'SVR',  # Do not use, performs bad and takes forever to apply
         # 'random_forest',  # Do not use, performs bad and takes lots of disk space
-        'MLP_tanh',
+        # 'MLP_tanh',
         # 'MLP_relu',
         # 'MLP_logistic',
         # 'MLP_uniform',
         # 'MLP_lbfgs',
-        # 'BDT',  # Do not use, performs bad and takes lots of disk space
         # 'BDT_small',  # Do not use, performs bad and takes lots of disk space
         # 'ridge',
-        # 'SVR',  # Do not use, performs bad and takes forever to apply
         # 'linear_SVR',
         # 'SGD',
     ]
