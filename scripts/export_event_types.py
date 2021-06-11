@@ -31,7 +31,7 @@ if __name__ == '__main__':
         raise ValueError("The first DL2 file to analyze must be the gamma file, as we need it to comput the" +
                          "event type thresholds.")
 
-    selected_model = 'MLP_tanh'
+    selected_model = 'linear_regression'
 
     trained_model = event_types.load_models([selected_model])
     # Get the energy binning from the trained model

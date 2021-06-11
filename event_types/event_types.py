@@ -739,7 +739,7 @@ def define_regressors():
     )
     regressors['BDT'] = AdaBoostRegressor(
         DecisionTreeRegressor(max_depth=30, random_state=0),
-        n_estimators=100, random_state=0
+        n_estimators=30, random_state=0
     )
     regressors['BDT_small'] = AdaBoostRegressor(
         DecisionTreeRegressor(max_depth=30, random_state=0),
