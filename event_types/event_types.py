@@ -1181,15 +1181,8 @@ def add_predict_column(dtf_e_test, trained_models):
     return dtf_test_squashed
 
 
-def partition_event_types(
-    dtf_test,
-    labels,
-    log_e_bins,
-    n_types=2,
-    type_bins='equal statistics',
-    return_partition=False,
-    event_type_bins=None
-):
+def partition_event_types(dtf_test, labels, log_e_bins, n_types=2, type_bins='equal statistics',
+                          return_partition=False, event_type_bins=None):
     '''
     Divide the events into n_types event types in each energy bin.
     The bins defining the types are calculated from the predicted label values,
@@ -1295,6 +1288,10 @@ def partition_event_types(
                 if this_event_type > n_types:
                     this_event_type = n_types
                 event_types[model_name][this_e_range]['true'].append(this_event_type)
+
+        for energy_key in dtf_e_test.keys():
+            this_dtf.loc[dtf_e_test[energy_key].index.values, 'event_type'] = (
+                event_types[model_name][energy_key]['reco'])
 
     if return_partition:
         return event_types, event_type_bins

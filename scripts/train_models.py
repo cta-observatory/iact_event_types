@@ -32,7 +32,9 @@ if __name__ == '__main__':
         # Prod5 baseline (do not use anymore)
         # dtf = event_types.load_dtf('gamma_onSource.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0')
         # dtf = event_types.load_dtf('gamma_cone.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0')
-        # Prod5 Threshold (alpha?)
+        # Prod5 CTA-N Threshold (beta)
+        # dtf = event_types.load_dtf('gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0')
+        # Prod5 Threshold (beta)
         # dtf = event_types.load_dtf('gamma_onSource.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0')
         dtf = event_types.load_dtf('gamma_cone.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0')
 
@@ -41,7 +43,7 @@ if __name__ == '__main__':
     # try using cut_class == 7 (non gamma-like events)
     dtf = dtf.dropna()
 
-    dtf_e = event_types.bin_data_in_energy(dtf, n_bins=20)
+    dtf_e = event_types.bin_data_in_energy(dtf, n_bins=2)
 
     dtf_e_train, dtf_e_test = event_types.split_data_train_test(
         dtf_e,
