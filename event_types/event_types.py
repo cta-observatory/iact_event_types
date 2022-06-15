@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 from cycler import cycler
 import copy
 from collections import defaultdict
-from astropy.coordinates.angle_utilities import angular_separation
-from astropy.coordinates import Angle
-from astropy import units as u
+# from astropy.coordinates.angle_utilities import angular_separation
+# from astropy.coordinates import Angle
+# from astropy import units as u
 import pandas as pd
 import seaborn as sns
 from pathlib import Path
@@ -36,12 +36,12 @@ from sklearn.svm import SVR, LinearSVR, SVC
 from sklearn.gaussian_process import GaussianProcessClassifier
 from sklearn.gaussian_process.kernels import RBF
 from sklearn.multiclass import OneVsRestClassifier
-from sklearn import model_selection, preprocessing, feature_selection, metrics
+from sklearn import model_selection, preprocessing  # , feature_selection, metrics
 from sklearn.pipeline import make_pipeline
 
 
 def setStyle(palette='default', bigPlot=False):
-    '''
+    """
     A function to set the plotting style.
     The function receives the colour palette name and whether it is
     a big plot or not. The latter sets the fonts and marker to be bigger in case it is a big plot.
@@ -63,7 +63,7 @@ def setStyle(palette='default', bigPlot=False):
     Raises
     ------
     KeyError if provided palette does not exist.
-    '''
+    """
 
     COLORS = dict()
     COLORS['classic'] = ['#ba2c54', '#5B90DC', '#FFAB44', '#0C9FB3', '#57271B', '#3B507D',
@@ -105,10 +105,10 @@ def setStyle(palette='default', bigPlot=False):
 
     plt.rc('lines', linewidth=2, markersize=markersize[plotSize])
     plt.rc('axes', prop_cycle=(
-        cycler(color=COLORS[palette])
-        + cycler(linestyle=LINES)
-        + cycler(marker=MARKERS))
-    )
+            cycler(color=COLORS[palette])
+            + cycler(linestyle=LINES)
+            + cycler(marker=MARKERS))
+           )
     plt.rc(
         'axes',
         titlesize=fontsize[plotSize],
@@ -126,14 +126,14 @@ def setStyle(palette='default', bigPlot=False):
 
 
 def branches_to_read():
-    '''
+    """
     Define a list of branches to read from the ROOT file
     (faster than reading all branches).
 
     Returns
     -------
     A list of branches names.
-    '''
+    """
 
     branches = [
         'runNumber',
@@ -174,7 +174,7 @@ def branches_to_read():
 
 
 def nominal_labels_train_features():
-    '''
+    """
     Define the nominal labels variable and training features to train with.
 
     Returns
@@ -183,7 +183,7 @@ def nominal_labels_train_features():
          Two variables are returned:
              1. the name of the variable to use as the labels in the training.
              2. list of names of variables to used as the training features.
-    '''
+    """
 
     labels = 'log_ang_diff'
 
@@ -238,7 +238,7 @@ def nominal_labels_train_features():
 
 
 def extract_df_from_dl2(root_filename):
-    '''
+    """
     Extract a Pandas DataFrame from a ROOT DL2 file.
     Selects all events surviving gamma/hadron cuts from the DL2 file.
     No direction cut is applied on the sample. TODO: should this be an option or studied further?
@@ -254,7 +254,7 @@ def extract_df_from_dl2(root_filename):
     Returns
     -------
     A pandas DataFrame with variables to use in the regression/classification, after cuts.
-    '''
+    """
 
     branches = branches_to_read()
 
@@ -276,10 +276,10 @@ def extract_df_from_dl2(root_filename):
     data_dict = defaultdict(list)
 
     for i_event, data_arrays in enumerate(uproot.iterate(
-        '{}:data'.format(root_filename),
-        step_size=step_size,
-        expressions=branches,
-        library='np')
+            '{}:data'.format(root_filename),
+            step_size=step_size,
+            expressions=branches,
+            library='np')
     ):
 
         if i_event > 0:
@@ -295,18 +295,18 @@ def extract_df_from_dl2(root_filename):
         y_off = data_arrays['Yoff'][gamma_like_events]
         x_off_mc = data_arrays['MCxoff'][gamma_like_events]
         y_off_mc = data_arrays['MCyoff'][gamma_like_events]
-        ang_diff = np.sqrt((x_off - x_off_mc)**2. + (y_off - y_off_mc)**2.)
+        ang_diff = np.sqrt((x_off - x_off_mc) ** 2. + (y_off - y_off_mc) ** 2.)
 
         # Variables for training:
         runNumber = data_arrays['runNumber'][gamma_like_events]
         eventNumber = data_arrays['eventNumber'][gamma_like_events]
         reco_energy = data_arrays['ErecS'][gamma_like_events]
         true_energy = data_arrays['MCe0'][gamma_like_events]
-        camera_offset = np.sqrt(x_off**2. + y_off**2.)
+        camera_offset = np.sqrt(x_off ** 2. + y_off ** 2.)
         NTels_reco = data_arrays['NImages'][gamma_like_events]
         x_cores = data_arrays['Xcore'][gamma_like_events]
         y_cores = data_arrays['Ycore'][gamma_like_events]
-        array_distance = np.sqrt(x_cores**2. + y_cores**2.)
+        array_distance = np.sqrt(x_cores ** 2. + y_cores ** 2.)
         img2_ang = data_arrays['img2_ang'][gamma_like_events]
         EChi2S = data_arrays['EChi2S'][gamma_like_events]
         SizeSecondMax = data_arrays['SizeSecondMax'][gamma_like_events]
@@ -378,7 +378,7 @@ def extract_df_from_dl2(root_filename):
         data_dict['log_dESabs'].extend(tuple(np.log10(dESabs)))
         data_dict['NTrig'].extend(tuple(NTrig))
         data_dict['meanPedvar_Image'].extend(tuple(meanPedvar_Image))
-        data_dict['MSWOL'].extend(tuple(MSCW/MSCL))
+        data_dict['MSWOL'].extend(tuple(MSCW / MSCL))
 
         data_dict['log_av_size'].extend(tuple(np.log10(av_size)))
         data_dict['log_me_size'].extend(tuple(np.log10(me_size)))
@@ -421,7 +421,7 @@ def extract_df_from_dl2(root_filename):
 
 
 def save_dtf(dtf, suffix=''):
-    '''
+    """
     Save the test dataset to disk as it is much quicker
     to read the reduced pickled data than the ROOT file.
 
@@ -430,7 +430,7 @@ def save_dtf(dtf, suffix=''):
     dtf: pandas DataFrames
     suffix: str
         The suffix to add to the file name
-    '''
+    """
 
     this_dir = Path('reduced_data').mkdir(parents=True, exist_ok=True)
 
@@ -447,7 +447,7 @@ def save_dtf(dtf, suffix=''):
 
 
 def load_dtf(suffix=''):
-    '''
+    """
     Load the reduced data from reduced_data/.
 
     Parameters
@@ -458,7 +458,7 @@ def load_dtf(suffix=''):
     Returns
     -------
     dtf: pandas DataFrames of the reduced data
-    '''
+    """
 
     if suffix != '':
         if not suffix.startswith('_'):
@@ -472,7 +472,7 @@ def load_dtf(suffix=''):
 
 
 def bin_data_in_energy(dtf, n_bins=20, log_e_reco_bins=None, return_bins=False):
-    '''
+    """
     Bin the data in dtf to n_bins with equal statistics.
 
     Parameters
@@ -491,7 +491,7 @@ def bin_data_in_energy(dtf, n_bins=20, log_e_reco_bins=None, return_bins=False):
     Returns
     -------
     A dictionary of DataFrames (keys=energy ranges, values=separated DataFrames).
-    '''
+    """
 
     dtf_e = dict()
 
@@ -512,8 +512,8 @@ def bin_data_in_energy(dtf, n_bins=20, log_e_reco_bins=None, return_bins=False):
         this_dtf = dtf[mask]
 
         this_e_range = '{:3.3f} < E < {:3.3f} TeV'.format(
-            10**log_e_reco_bins[i_e_bin - 1],
-            10**log_e_high
+            10 ** log_e_reco_bins[i_e_bin - 1],
+            10 ** log_e_high
         )
         if len(this_dtf) < 1:
             raise RuntimeError('The range {} is empty'.format(this_e_range))
@@ -526,7 +526,7 @@ def bin_data_in_energy(dtf, n_bins=20, log_e_reco_bins=None, return_bins=False):
 
 
 def extract_energy_bins(e_ranges):
-    '''
+    """
     Extract the energy bins from the list of energy ranges.
     This is a little weird function which can probably be avoided if we use a class
     instead of a namespace. However, it is useful for now so...
@@ -540,12 +540,11 @@ def extract_energy_bins(e_ranges):
     -------
     energy_bins: list of floats
         List of energy bin edges given in e_ranges.
-    '''
+    """
 
     energy_bins = list()
 
     for this_range in e_ranges:
-
         low_e = float(this_range.split()[0])
         energy_bins.append(low_e)
 
@@ -555,7 +554,7 @@ def extract_energy_bins(e_ranges):
 
 
 def extract_energy_bins_centers(e_ranges):
-    '''
+    """
     Extract the energy bins from the list of energy ranges.
     This is a little weird function which can probably be avoided if we use a class
     instead of a namespace. However, it is useful for now so...
@@ -569,22 +568,21 @@ def extract_energy_bins_centers(e_ranges):
     -------
     energy_bin_centers: list of floats
         Energy bins calculated as the averages of the energy ranges in e_ranges.
-    '''
+    """
 
     energy_bin_centers = list()
 
     for this_range in e_ranges:
-
         low_e = float(this_range.split()[0])
         high_e = float(this_range.split()[4])
 
-        energy_bin_centers.append((high_e + low_e)/2.)
+        energy_bin_centers.append((high_e + low_e) / 2.)
 
     return energy_bin_centers
 
 
 def split_data_train_test(dtf_e, test_size=0.75, random_state=75):
-    '''
+    """
     Split the data into training and testing datasets.
     The data is split in each energy range separately with 'test_size'
     setting the fraction of the test sample.
@@ -605,7 +603,7 @@ def split_data_train_test(dtf_e, test_size=0.75, random_state=75):
     -------
     Two dictionaries of DataFrames, one for training and one for testing
     (keys=energy ranges, values=separated DataFrames).
-    '''
+    """
 
     dtf_e_train = dict()
     dtf_e_test = dict()
@@ -621,7 +619,7 @@ def split_data_train_test(dtf_e, test_size=0.75, random_state=75):
 
 
 def add_event_type_column(dtf, labels, n_types=2):
-    '''
+    """
     Add an event type column by dividing the data into n_types bins with equal statistics
     based on the labels column in dtf.
     Unlike in most cases in this code, dtf is the DataFrame itself,
@@ -639,7 +637,7 @@ def add_event_type_column(dtf, labels, n_types=2):
     Returns
     -------
     A DataFrame with an additional event_type column.
-    '''
+    """
 
     event_type_quantiles = np.linspace(0, 1, n_types + 1)
     event_types_bins = mstats.mquantiles(dtf[labels].values, event_type_quantiles)
@@ -659,7 +657,7 @@ def add_event_type_column(dtf, labels, n_types=2):
 
 
 def define_regressors():
-    '''
+    """
     Define regressors to train the data with.
     All possible regressors should be added here.
     Regressors can be simple ones or pipelines that include standardisation or anything else.
@@ -672,7 +670,7 @@ def define_regressors():
     Returns
     -------
     A dictionary of regressors to train.
-    '''
+    """
 
     regressors = dict()
 
@@ -761,7 +759,7 @@ def define_regressors():
 
 
 def define_classifiers():
-    '''
+    """
     Define classifiers to train the data with.
     All possible classifiers should be added here.
     Classifiers can be simple ones or pipelines that include standardisation or anything else.
@@ -774,7 +772,7 @@ def define_classifiers():
     Returns
     -------
     A dictionary of classifiers to train.
-    '''
+    """
 
     classifiers = dict()
 
@@ -867,7 +865,7 @@ def define_classifiers():
 
 
 def train_models(dtf_e_train, models_to_train):
-    '''
+    """
     Train all the models in models, using the data in dtf_e_train.
     The models are trained per energy range in dtf_e_train.
 
@@ -877,7 +875,7 @@ def train_models(dtf_e_train, models_to_train):
         Each entry in the dict is a DataFrame containing the data to train with.
         The keys of the dict are the energy ranges of the data.
         Each DataFrame is assumed to contain all 'train_features' and 'labels'.
-    models: a nested dict of models:
+    models_to_train: a nested dict of models:
         1st dict:
             keys=model names, values=2nd dict
         2nd dict:
@@ -897,15 +895,14 @@ def train_models(dtf_e_train, models_to_train):
             'model': trained model for this energy range
             'train_features': list of variable names to train with.
             'labels': Name of the variable used as the labels in the training.
-    '''
+    """
 
     models = dict()
     for this_model_name, this_model in models_to_train.items():
         models[this_model_name] = dict()
         for this_e_range in dtf_e_train.keys():
-
             print('Training {} in the energy range - {}'.format(this_model_name, this_e_range))
-            X_train = dtf_e_train[this_e_range][this_model['train_features']].values
+            x_train = dtf_e_train[this_e_range][this_model['train_features']].values
             y_train = dtf_e_train[this_e_range][this_model['labels']].values
 
             models[this_model_name][this_e_range] = dict()
@@ -915,14 +912,14 @@ def train_models(dtf_e_train, models_to_train):
                 'test_data_suffix'
             ]
             models[this_model_name][this_e_range]['model'] = copy.deepcopy(
-                this_model['model'].fit(X_train, y_train)
+                this_model['model'].fit(x_train, y_train)
             )
 
     return models
 
 
 def save_models(trained_models):
-    '''
+    """
     Save the trained models to disk.
     The path for the models is in models/'model name'.
     All models are saved per energy range for each model in trained_models.
@@ -939,12 +936,11 @@ def save_models(trained_models):
             'train_features': list of variable names trained with.
             'labels': name of the variable used as the labels in the training.
             'test_data_suffix': suffix of the test dataset saved to disk.
-    '''
+    """
 
     for model_name, this_model in trained_models.items():
-        this_dir = Path('models').joinpath(model_name).mkdir(parents=True, exist_ok=True)
+        Path('models').joinpath(model_name).mkdir(parents=True, exist_ok=True)
         for this_e_range, model_now in this_model.items():
-
             e_range_name = this_e_range.replace(' < ', '-').replace(' ', '_')
 
             model_file_name = Path('models').joinpath(
@@ -957,8 +953,8 @@ def save_models(trained_models):
 
 
 def save_test_dtf(dtf_e_test, suffix='default'):
-    '''
-    Save the test data to disk so it can be loaded together with load_models().
+    """
+    Save the test data to disk, so it can be loaded together with load_models().
     The path for the test data is in models/test_data.
 
     Parameters
@@ -969,9 +965,9 @@ def save_test_dtf(dtf_e_test, suffix='default'):
         Each DataFrame is assumed to contain all 'train_features' and 'labels'.
     suffix: str
         The suffix to add to the file name
-    '''
+    """
 
-    this_dir = Path('models').joinpath('test_data').mkdir(parents=True, exist_ok=True)
+    Path('models').joinpath('test_data').mkdir(parents=True, exist_ok=True)
 
     if suffix != '':
         if not suffix.startswith('_'):
@@ -986,7 +982,7 @@ def save_test_dtf(dtf_e_test, suffix='default'):
 
 
 def save_scores(scores):
-    '''
+    """
     Save the scores of the trained models to disk.
     The path for the scores is in scores/'model name'.
 
@@ -995,11 +991,10 @@ def save_scores(scores):
     scores: a dict of scores per energy range per trained sklearn model.
         dict:
             keys=model names, values=list of scores
-    '''
+    """
 
-    this_dir = Path('scores').mkdir(parents=True, exist_ok=True)
+    Path('scores').mkdir(parents=True, exist_ok=True)
     for model_name, these_scores in scores.items():
-
         file_name = Path('scores').joinpath('{}.joblib'.format(model_name))
         dump(these_scores, file_name, compress=3)
 
@@ -1007,7 +1002,7 @@ def save_scores(scores):
 
 
 def load_test_dtf(suffix='default'):
-    '''
+    """
     Load the test data together with load_models().
     The path for the test data is in models/test_data.
 
@@ -1022,7 +1017,7 @@ def load_test_dtf(suffix='default'):
         Each entry in the dict is a DataFrame containing the data to test with.
         The keys of the dict are the energy ranges of the data.
         Each DataFrame is assumed to contain all 'train_features' and 'labels'.
-    '''
+    """
 
     if suffix != '':
         if not suffix.startswith('_'):
@@ -1036,7 +1031,7 @@ def load_test_dtf(suffix='default'):
 
 
 def load_multi_test_dtfs(data_names=['default']):
-    '''
+    """
     Load the test data together with load_models().
     The path for the test data is in models/test_data.
 
@@ -1055,7 +1050,7 @@ def load_multi_test_dtfs(data_names=['default']):
             Each entry in the dict is a DataFrame containing the data to test with.
             The keys of the dict are the energy ranges of the data.
             Each DataFrame is assumed to contain all 'train_features' and 'labels'.
-    '''
+    """
 
     dtf_e_test = dict()
     for this_data_name in data_names:
@@ -1065,7 +1060,7 @@ def load_multi_test_dtfs(data_names=['default']):
 
 
 def load_models(model_names=list()):
-    '''
+    """
     Read the trained models from disk.
     The path for the models is in models/'model name'.
     All models are saved per energy range for each model in trained_models.
@@ -1087,7 +1082,7 @@ def load_models(model_names=list()):
             'train_features': list of variable names trained with.
             'labels': name of the variable used as the labels in the training.
             'test_data_suffix': suffix of the test dataset saved to disk.
-    '''
+    """
 
     trained_models = defaultdict(dict)
 
@@ -1097,7 +1092,6 @@ def load_models(model_names=list()):
         for this_file in sorted(models_dir.iterdir(), key=os.path.getmtime):
 
             if this_file.is_file():
-
                 e_range_name = this_file.stem.replace('-', ' < ').replace('_', ' ')
 
                 model_file_name = Path('models').joinpath(
@@ -1110,7 +1104,7 @@ def load_models(model_names=list()):
 
 
 def add_predict_column(dtf_e_test, trained_models):
-    '''
+    """
     Add a column to the test dataset with predicted label values.
     Instead of returning the dataset as is divided into energy bins,
     the energy binned datasets is combined into one dataset.
@@ -1145,7 +1139,7 @@ def add_predict_column(dtf_e_test, trained_models):
             The pandas DataFrame containing the test data and an additional
             column with prediction values. This DataFrame is a combination of the
             energy binned DataFrames given as input
-    '''
+    """
 
     dtf_test_squashed = dict()
     list_of_dtfs = list()
@@ -1183,7 +1177,7 @@ def add_predict_column(dtf_e_test, trained_models):
 
 def partition_event_types(dtf_test, labels, log_e_bins, n_types=2, type_bins='equal statistics',
                           return_partition=False, event_type_bins=None):
-    '''
+    """
     Divide the events into n_types event types in each energy bin.
     The bins defining the types are calculated from the predicted label values,
     assumed to be included already in dtf_test.
@@ -1198,7 +1192,7 @@ def partition_event_types(dtf_test, labels, log_e_bins, n_types=2, type_bins='eq
             Pandas DataFrames containing the test data and a column with the predicted values.
     labels: string
         The name of the label column used to train with.
-    log_e_reco_bins: array like
+    log_e_bins: array like
         A list of energy bins in which to divide the data into types.
         The bins are assumed to be the log values of the energy in TeV.
     n_types: int (default=2)
@@ -1226,7 +1220,7 @@ def partition_event_types(dtf_test, labels, log_e_bins, n_types=2, type_bins='eq
             keys=energy ranges, values=3rd dict
         3rd dict:
             keys=true or reco, values=event type
-    '''
+    """
 
     event_types = dict()
 
@@ -1267,7 +1261,7 @@ def partition_event_types(dtf_test, labels, log_e_bins, n_types=2, type_bins='eq
             # If return_partition is True, then store the event type bins into the container.
             if return_partition:
                 event_type_bins[model_name][this_e_range] = event_types_bins
-            # If return_partition is False and a event_type_bins container was provided,
+            # If return_partition is False and an event_type_bins container was provided,
             # then use the values from the container.
 
             if not return_partition and event_type_bins is not None:
@@ -1300,7 +1294,7 @@ def partition_event_types(dtf_test, labels, log_e_bins, n_types=2, type_bins='eq
 
 
 def predicted_event_types(dtf_e_test, trained_models, n_types=2):
-    '''
+    """
     Get the true and predicted event types for n_types event types.
     Two lists of types are returned per model and per energy range, one true and one predicted.
     This function is meant to be used only for the classification case.
@@ -1337,7 +1331,7 @@ def predicted_event_types(dtf_e_test, trained_models, n_types=2):
             keys=energy ranges, values=3rddict
         3rd dict:
             keys=true or reco, values=event type
-    '''
+    """
 
     event_types = dict()
 
@@ -1346,7 +1340,6 @@ def predicted_event_types(dtf_e_test, trained_models, n_types=2):
         event_types[model_name] = dict()
 
         for this_e_range, this_model in model.items():
-
             event_types[model_name][this_e_range] = defaultdict(list)
             event_types[model_name][this_e_range] = defaultdict(list)
 
@@ -1364,7 +1357,7 @@ def predicted_event_types(dtf_e_test, trained_models, n_types=2):
 
 
 def add_event_types_column(dtf_e, labels, n_types=[2, 3, 4]):
-    '''
+    """
     Divide the events into n_types event types.
     The bins defining the types are calculated from the label values.
     The data will be divided to n number of types with equivalent number of events in each type.
@@ -1387,7 +1380,7 @@ def add_event_types_column(dtf_e, labels, n_types=[2, 3, 4]):
     dtf_e: dict of pandas DataFrames
         The same DataFrame as the input but with added columns for event types,
         one column per n_types entry. The column names are event_type_n.
-    '''
+    """
 
     pd.options.mode.chained_assignment = None
 
@@ -1416,7 +1409,7 @@ def add_event_types_column(dtf_e, labels, n_types=[2, 3, 4]):
 
 
 def extract_unique_dataset_names(trained_models):
-    '''
+    """
     Extract all test datasets names necessary for the given trained models.
 
     Parameters
@@ -1436,7 +1429,7 @@ def extract_unique_dataset_names(trained_models):
     -------
     dataset_names: set
         Set of unique data set names
-    '''
+    """
 
     dataset_names = set()
     for model in trained_models.values():
@@ -1447,7 +1440,7 @@ def extract_unique_dataset_names(trained_models):
 
 
 def plot_pearson_correlation(dtf, title):
-    '''
+    """
     Calculate the Pearson correlation between all variables in this DataFrame.
 
     Parameters
@@ -1460,7 +1453,7 @@ def plot_pearson_correlation(dtf, title):
     Returns
     -------
     A pyplot instance with the Pearson correlation plot.
-    '''
+    """
 
     plt.subplots(figsize=[16, 16])
     corr_matrix = dtf.corr(method='pearson')
@@ -1481,7 +1474,7 @@ def plot_pearson_correlation(dtf, title):
 
 
 def plot_test_vs_predict(dtf_e_test, trained_models, trained_model_name):
-    '''
+    """
     Plot true values vs. the predictions of the model for all energy bins.
 
     Parameters
@@ -1507,7 +1500,7 @@ def plot_test_vs_predict(dtf_e_test, trained_models, trained_model_name):
     Returns
     -------
     A pyplot instance with the test vs. prediction plot.
-    '''
+    """
 
     nrows = 5
     ncols = 4
@@ -1529,7 +1522,7 @@ def plot_test_vs_predict(dtf_e_test, trained_models, trained_model_name):
 
         y_pred = this_model['model'].predict(X_test)
 
-        ax = axs[int(np.floor(i_plot/ncols)), i_plot % ncols]
+        ax = axs[int(np.floor(i_plot / ncols)), i_plot % ncols]
 
         ax.hist2d(y_pred, y_test, bins=(50, 50), cmap=plt.cm.jet)
         ax.plot(
@@ -1560,7 +1553,7 @@ def plot_test_vs_predict(dtf_e_test, trained_models, trained_model_name):
 
 
 def plot_matrix(dtf, train_features, labels, n_types=2, plot_events=20000):
-    '''
+    """
     Plot a matrix of each variable in train_features against another (not all combinations).
     The data is divided to n_types bins of equal statistics based on the labels.
     Each type is plotted in a different colour.
@@ -1584,7 +1577,7 @@ def plot_matrix(dtf, train_features, labels, n_types=2, plot_events=20000):
     Returns
     -------
     A list of seaborn.PairGrid instances, each with one matrix plot.
-    '''
+    """
 
     setStyle()
 
@@ -1603,7 +1596,7 @@ def plot_matrix(dtf, train_features, labels, n_types=2, plot_events=20000):
 
     vars_to_plot = np.array_split(
         [labels] + train_features,
-        round(len([labels] + train_features)/5)
+        round(len([labels] + train_features) / 5)
     )
     grid_plots = list()
     for these_vars in vars_to_plot:
@@ -1620,7 +1613,7 @@ def plot_matrix(dtf, train_features, labels, n_types=2, plot_events=20000):
 
 
 def plot_score_comparison(dtf_e_test, trained_models):
-    '''
+    """
     Plot the score of the model as a function of energy.
     #TODO add a similar function that plots from saved scores instead of calculating every time.
 
@@ -1648,7 +1641,7 @@ def plot_score_comparison(dtf_e_test, trained_models):
     Returns
     -------
     A pyplot instance with the scores plot.
-    '''
+    """
 
     setStyle()
 
@@ -1698,7 +1691,7 @@ def plot_score_comparison(dtf_e_test, trained_models):
 
 
 def plot_confusion_matrix(event_types, trained_model_name, n_types=2):
-    '''
+    """
     Plot the confusion matrix of the model for all energy bins.
 
     Parameters
@@ -1709,14 +1702,14 @@ def plot_confusion_matrix(event_types, trained_model_name, n_types=2):
         2nd dict:
             keys=true or reco, values=event type
     trained_model_name: str
-        Name of the model used to obtained the reconstructed event types
+        Name of the model used to obtain the reconstructed event types
     n_types: int (default=2)
         The number of types the data was divided in.
 
     Returns
     -------
     A pyplot instance with the confusion matrix plot.
-    '''
+    """
 
     # setStyle()
 
@@ -1726,8 +1719,7 @@ def plot_confusion_matrix(event_types, trained_model_name, n_types=2):
     fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=[14, 18])
 
     for i_plot, this_e_range in enumerate(event_types.keys()):
-
-        ax = axs[int(np.floor((i_plot)/ncols)), (i_plot) % ncols]
+        ax = axs[int(np.floor(i_plot / ncols)), i_plot % ncols]
 
         cm = confusion_matrix(
             event_types[this_e_range]['true'],
@@ -1764,7 +1756,7 @@ def plot_confusion_matrix(event_types, trained_model_name, n_types=2):
 
 
 def plot_1d_confusion_matrix(event_types, trained_model_name, n_types=2):
-    '''
+    """
     Plot a one-dimensional confusion matrix of the model for all energy bins.
 
     Parameters
@@ -1775,14 +1767,14 @@ def plot_1d_confusion_matrix(event_types, trained_model_name, n_types=2):
         2nd dict:
             keys=true or reco, values=event type
     trained_model_name: str
-        Name of the model used to obtained the reconstructed event types
+        Name of the model used to obtain the reconstructed event types
     n_types: int (default=2)
         The number of types the data was divided in.
 
     Returns
     -------
     A pyplot instance with the one-dimensional confusion matrix plot.
-    '''
+    """
 
     # setStyle()
 
@@ -1793,14 +1785,14 @@ def plot_1d_confusion_matrix(event_types, trained_model_name, n_types=2):
 
     for i_plot, this_e_range in enumerate(event_types.keys()):
 
-        ax = axs[int(np.floor((i_plot)/ncols)), (i_plot) % ncols]
+        ax = axs[int(np.floor(i_plot / ncols)), i_plot % ncols]
 
         pred_error = np.abs(
             np.array(event_types[this_e_range]['true']) - np.array(event_types[this_e_range]['reco'])
         )
         frac_pred_error = list()
         for i_type in range(n_types):
-            frac_pred_error.append(np.sum(pred_error == i_type)/len(pred_error))
+            frac_pred_error.append(np.sum(pred_error == i_type) / len(pred_error))
 
         df = pd.DataFrame(
             {'Prediction accuracy': frac_pred_error},
