@@ -38,10 +38,9 @@ if __name__ == '__main__':
         # dtf = event_types.load_dtf('gamma_onSource.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0')
         # dtf = event_types.load_dtf('gamma_cone.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0')
         # Prod5 north (beta?)
-        # dtf = event_types.load_dtf('gamma_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0')
+        dtf = event_types.load_dtf('gamma_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0')
         # dtf = event_types.load_dtf('gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0')
-        dtf = event_types.load_dtf('/data/magic/users-ciemat/jbernete/CTA/event_types/reduced_data/LaPalma/'
-                                   'dtf_gamma_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0.joblib')
+
 
     # For the training, make sure we do not use events with cut_class == 7 (non gamma-like events)
     # dtf = dtf[dtf['cut_class'] != 7].dropna()
