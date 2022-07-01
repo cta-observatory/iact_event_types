@@ -1,5 +1,4 @@
 import argparse
-from pathlib import Path
 from event_types import event_types
 
 if __name__ == '__main__':
@@ -40,7 +39,6 @@ if __name__ == '__main__':
         # Prod5 north (beta?)
         dtf = event_types.load_dtf('gamma_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0')
         # dtf = event_types.load_dtf('gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0')
-
 
     # For the training, make sure we do not use events with cut_class == 7 (non gamma-like events)
     # dtf = dtf[dtf['cut_class'] != 7].dropna()
