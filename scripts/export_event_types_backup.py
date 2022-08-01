@@ -23,19 +23,17 @@ if __name__ == '__main__':
         # 'electron_onSource.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0.root',
         # 'proton_onSource.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0.root'
         # Prod-5 full CTA-N array:
-        # 'gamma_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0.root',
-        # 'electron_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0.root',
-        # 'proton_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0.root'
+        'gamma_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0.root',
+        'electron_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0.root',
+        'proton_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0.root'
         # Prod-5 CTA-S threshold array:
-        'gamma_onSource.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0.root',
-        'electron_onSource.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0.root',
-        'proton_onSource.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0.root'
+        # 'gamma_onSource.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0.root',
+        # 'electron_onSource.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0.root',
+        # 'proton_onSource.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0.root'
     ]
     if "gamma" not in dl2_file_list[0]:
         raise ValueError("The first DL2 file to analyze must be the gamma file, as we need it to comput the" +
                          "event type thresholds.")
-
-    labels, train_features = event_types.nominal_labels_train_features()
 
     selected_model = 'MLP_tanh'
 
@@ -48,11 +46,6 @@ if __name__ == '__main__':
         event_types.extract_energy_bins(e_ranges)
     )
 
-    # Energy binning (in log10 TeV) used to separate event types. We use the binning usually used in
-    # sensitivity curves, extended to lower and higher energies.
-    event_type_log_e_bins = np.arange(-1.7, 2.5, 0.2)
-    # Number of event types we want to classify our data:
-    n_types = 3
     # This variable will store the event type partitioning container.
     event_type_partition = None
 
@@ -78,54 +71,60 @@ if __name__ == '__main__':
         if 'gamma' in dl2_file:
             # To match the format needed by partition_event_types
             dtf_e_test_formatted = {'default': dtf_e_test}
-            # Add the predicted Y_diff to the data frame:
-            dtf_test = event_types.add_predict_column(dtf_e_test_formatted, trained_model)
-            # Divide the Y_diff distributions into a discrete number of event types (n_types)
+            # Calculate event types for the gamma-like gamma events that was not used for training (test sample):
             d_types, event_type_partition = event_types.partition_event_types(
-                dtf_test,
-                labels=labels,
-                log_e_bins=event_type_log_e_bins,
-                n_types=n_types,
+                dtf_e_test_formatted,
+                trained_model,
+                n_types=3,
+                type_bins='equal statistics',
                 return_partition=True
             )
-            # To match the format needed by partition_event_types
-            dtf_7_e_formatted = {'default': dtf_7_e}
             # Calculate event types for the subsample of non-gamma-like gamma events (cut class 7), using the
             # same event type thresholds as in the gamma-like gammas:
-            dtf_7_test = event_types.add_predict_column(dtf_7_e_formatted, trained_model)
+            dtf_e_7_formatted = {'default': dtf_7_e}
             d_types_7 = event_types.partition_event_types(
-                dtf_7_test,
-                labels=labels,
-                log_e_bins=event_type_log_e_bins,
-                n_types=n_types,
+                dtf_e_7_formatted,
+                trained_model,
+                n_types=3,
+                type_bins='equal statistics',
                 event_type_bins=event_type_partition
             )
         else:
             # Calculate event types for proton and electron events, using the same event type thresholds as in the
             # gamma-like gammas:
-            dtf_e_formatted = {'default': dtf_e_test}
-            dtf_test = event_types.add_predict_column(dtf_e_formatted, trained_model)
+            dtf_e_test_formatted = {'default': dtf_e_test}
             d_types = event_types.partition_event_types(
-                dtf_test,
-                labels=labels,
-                log_e_bins=event_type_log_e_bins,
-                n_types=n_types,
+                dtf_e_test_formatted,
+                trained_model,
+                n_types=3,
+                type_bins='equal statistics',
                 event_type_bins=event_type_partition
             )
         # Start creating the event_type column within the original dataframe:
         dtf['event_type'] = -99
-        # from IPython import embed
-        # embed()
         for energy_key in dtf_e_test.keys():
-            if 'gamma_cone' in dl2_file:
-                dtf.loc[dtf_e_train[energy_key].index.values, 'event_type'] = -1
-        if 'gamma' in dl2_file:
-            dtf.loc[dtf_7_test['default'].index.values, 'event_type'] = dtf_7_test['default']['event_type']
-        dtf.loc[dtf_test['default'].index.values, 'event_type'] = dtf_test['default']['event_type']
+            if 'gamma' in dl2_file:
+                if 'gamma_cone' in dl2_file:
+                    dtf.loc[dtf_e_train[energy_key].index.values, 'event_type'] = -1
+                dtf.loc[dtf_7_e[energy_key].index.values, 'event_type'] = (
+                    d_types_7[selected_model][energy_key]['reco']
+                )
+            dtf.loc[dtf_e_test[energy_key].index.values, 'event_type'] = (
+                d_types[selected_model][energy_key]['reco']
+            )
+        # labels, train_features = event_types.nominal_labels_train_features()
+        # plot_list = event_types.plot_matrix(dtf, train_features, labels, n_types=3, plot_events=20000)
+        # for i, plot in enumerate(plot_list):
+        #     if "gamma" in dl2_file:
+        #         plot.savefig("gamma_features_{}.pdf".format(i))
+        #     elif "proton" in dl2_file:
+        #         plot.savefig("proton_features_{}.pdf".format(i))
+        #     elif "electron" in dl2_file:
+        #         plot.savefig("electron_features_{}.pdf".format(i))
 
         print("A total of {} events will be written.".format(len(dtf['event_type'])))
-        for event_type in [-99, 1, 2, 3]:
-            print("A total of {} events of type {}".format(np.sum(dtf['event_type'] == event_type), event_type))
+        for event_type in np.unique(dtf['event_type']):
+            print("A total of {} events of type {}".format(len(dtf[dtf['event_type'] == event_type]), event_type))
 
         with open(dl2_file.replace('.root', '.txt'), 'w') as txt_file:
             for value in dtf['event_type']:

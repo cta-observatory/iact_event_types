@@ -139,10 +139,8 @@ def branches_to_read():
         'runNumber',
         'eventNumber',
         'MCe0',
-        'MCze',
-        'MCaz',
-        'Ze',
-        'Az',
+        'MCxoff',
+        'MCyoff',
         'size',
         'ErecS',
         'NImages',
@@ -233,6 +231,7 @@ def nominal_labels_train_features():
         'av_tgrad_x',
         'me_tgrad_x',
         'std_tgrad_x',
+        'camera_offset',
     ]
 
     return labels, train_features
@@ -291,31 +290,23 @@ def extract_df_from_dl2(root_filename):
         cut_class = cuts_arrays['CutClass'][i_event * step_size:(i_event + 1) * step_size]
         cut_class = cut_class[gamma_like_events]
 
-        # Variables for training:
-        mc_alt = (90 - data_arrays['MCze'][gamma_like_events]) * u.deg
-        mc_az = (data_arrays['MCaz'][gamma_like_events]) * u.deg
-        reco_alt = (90 - data_arrays['Ze'][gamma_like_events]) * u.deg
-        reco_az = (data_arrays['Az'][gamma_like_events]) * u.deg
-        # Angular separation bewteen the true vs reconstructed direction
-        ang_diff = angular_separation(
-            mc_az,  # az
-            mc_alt,  # alt
-            reco_az,
-            reco_alt,
-        )
+        # Label to train with:
+        x_off = data_arrays['Xoff'][gamma_like_events]
+        y_off = data_arrays['Yoff'][gamma_like_events]
+        x_off_mc = data_arrays['MCxoff'][gamma_like_events]
+        y_off_mc = data_arrays['MCyoff'][gamma_like_events]
+        ang_diff = np.sqrt((x_off - x_off_mc)**2. + (y_off - y_off_mc)**2.)
 
         # Variables for training:
         runNumber = data_arrays['runNumber'][gamma_like_events]
         eventNumber = data_arrays['eventNumber'][gamma_like_events]
         reco_energy = data_arrays['ErecS'][gamma_like_events]
         true_energy = data_arrays['MCe0'][gamma_like_events]
+        camera_offset = np.sqrt(x_off**2. + y_off**2.)
         NTels_reco = data_arrays['NImages'][gamma_like_events]
         x_cores = data_arrays['Xcore'][gamma_like_events]
         y_cores = data_arrays['Ycore'][gamma_like_events]
         array_distance = np.sqrt(x_cores**2. + y_cores**2.)
-        x_off = data_arrays['Xoff'][gamma_like_events]
-        y_off = data_arrays['Yoff'][gamma_like_events]
-        camera_offset = np.sqrt(x_off**2. + y_off**2.)
         img2_ang = data_arrays['img2_ang'][gamma_like_events]
         EChi2S = data_arrays['EChi2S'][gamma_like_events]
         SizeSecondMax = data_arrays['SizeSecondMax'][gamma_like_events]
@@ -369,15 +360,15 @@ def extract_df_from_dl2(root_filename):
         data_dict['runNumber'].extend(tuple(runNumber))
         data_dict['eventNumber'].extend(tuple(eventNumber))
         data_dict['cut_class'].extend(tuple(cut_class))
-        data_dict['log_ang_diff'].extend(tuple(np.log10(ang_diff.value)))
+        data_dict['log_ang_diff'].extend(tuple(np.log10(ang_diff)))
         data_dict['log_true_energy'].extend(tuple(np.log10(true_energy)))
         data_dict['log_reco_energy'].extend(tuple(np.log10(reco_energy)))
+        data_dict['camera_offset'].extend(tuple(camera_offset))
         data_dict['log_NTels_reco'].extend(tuple(np.log10(NTels_reco)))
         data_dict['array_distance'].extend(tuple(array_distance))
         data_dict['img2_ang'].extend(tuple(img2_ang))
         data_dict['log_EChi2S'].extend(tuple(np.log10(EChi2S)))
         data_dict['log_SizeSecondMax'].extend(tuple(np.log10(SizeSecondMax)))
-        data_dict['camera_offset'].extend(tuple(camera_offset))
         data_dict['log_NTelPairs'].extend(tuple(np.log10(NTelPairs)))
         data_dict['MSCW'].extend(tuple(MSCW))
         data_dict['MSCL'].extend(tuple(MSCL))
@@ -748,7 +739,7 @@ def define_regressors():
     )
     regressors['BDT'] = AdaBoostRegressor(
         DecisionTreeRegressor(max_depth=30, random_state=0),
-        n_estimators=100, random_state=0
+        n_estimators=30, random_state=0
     )
     regressors['BDT_small'] = AdaBoostRegressor(
         DecisionTreeRegressor(max_depth=30, random_state=0),
@@ -1118,12 +1109,11 @@ def load_models(model_names=list()):
     return trained_models
 
 
-def partition_event_types(dtf_e_test, trained_models, n_types=2, type_bins='equal statistics',
-                          return_partition=False, event_type_bins=None):
+def add_predict_column(dtf_e_test, trained_models):
     '''
-    Divide the events into n_types event types.
-    The bins defining the types are calculated from the predicted label values.
-    Two lists of types are returned per model and per energy range, one true and one predicted.
+    Add a column to the test dataset with predicted label values.
+    Instead of returning the dataset as is divided into energy bins,
+    the energy binned datasets is combined into one dataset.
 
     Parameters
     ----------
@@ -1145,6 +1135,72 @@ def partition_event_types(dtf_e_test, trained_models, n_types=2, type_bins='equa
             'train_features': list of variable names trained with.
             'labels': name of the variable used as the labels in the training.
             'test_data_suffix': suffix of the test dataset saved to disk.
+
+    Returns
+    -------
+    dtf_test_squashed: a nested dict of test datasets per trained model
+        1st dict:
+            keys=test_data_suffix, values=2nd dict
+        2nd dict:
+            The pandas DataFrame containing the test data and an additional
+            column with prediction values. This DataFrame is a combination of the
+            energy binned DataFrames given as input
+    '''
+
+    dtf_test_squashed = dict()
+    list_of_dtfs = list()
+
+    for model_name, model in trained_models.items():
+
+        print('Calculating the predictions for the {} model'.format(model_name))
+
+        for this_e_range, this_model in model.items():
+
+            # To keep lines short
+            dtf_this_e = dtf_e_test[this_model['test_data_suffix']][this_e_range]
+            list_of_dtfs.append(dtf_this_e)
+
+            X_test = dtf_this_e[this_model['train_features']].values
+            # Check if any value is inf (found one on a proton file...).
+            # If true, change it to a big negative or positive value.
+            if np.any(np.isinf(X_test)):
+                # Remove positive infs
+                X_test[X_test > 999999] = 999999
+                # Remove negative infs
+                X_test[X_test < -999999] = -999999
+            if np.any(np.isnan(X_test)):
+                # Remove nans
+                X_test[np.isnan(X_test)] = 99999
+
+            y_pred = this_model['model'].predict(X_test)
+
+            dtf_this_e.loc[:, 'y_pred'] = y_pred
+
+        dtf_test_squashed[this_model['test_data_suffix']] = pd.concat(list_of_dtfs)
+
+    return dtf_test_squashed
+
+
+def partition_event_types(dtf_test, labels, log_e_bins, n_types=2, type_bins='equal statistics',
+                          return_partition=False, event_type_bins=None):
+    '''
+    Divide the events into n_types event types in each energy bin.
+    The bins defining the types are calculated from the predicted label values,
+    assumed to be included already in dtf_test.
+    Two lists of types are returned per model and per energy range, one true and one predicted.
+
+    Parameters
+    ----------
+    dtf_test: a nested dict of test datasets per trained model
+        1st dict:
+            keys=test_data_suffix, values=2nd dict
+        2nd dict:
+            Pandas DataFrames containing the test data and a column with the predicted values.
+    labels: string
+        The name of the label column used to train with.
+    log_e_reco_bins: array like
+        A list of energy bins in which to divide the data into types.
+        The bins are assumed to be the log values of the energy in TeV.
     n_types: int (default=2)
         The number of types to divide the data in.
     type_bins: list of floats or str
@@ -1154,8 +1210,8 @@ def partition_event_types(dtf_e_test, trained_models, n_types=2, type_bins='equa
         The list must be n_types + 1 long and the first and last values must be zero and one.
         The default is equal statistics bins, given as the default string.
     return_partition: Bool
-        If true, a dictionary containing the partition values used for each model and each energy bin will
-        be returned.
+        If true, a dictionary containing the partition values used for each model
+        and each energy bin will be returned.
     event_type_bins: a nested dict of partition values per trained model and energy range
         1st dict:
             keys=model names, values=2nd dict
@@ -1167,7 +1223,7 @@ def partition_event_types(dtf_e_test, trained_models, n_types=2, type_bins='equa
         1st dict:
             keys=model names, values=2nd dict
         2nd dict:
-            keys=energy ranges, values=3rddict
+            keys=energy ranges, values=3rd dict
         3rd dict:
             keys=true or reco, values=event type
     '''
@@ -1188,43 +1244,36 @@ def partition_event_types(dtf_e_test, trained_models, n_types=2, type_bins='equa
     if return_partition:
         event_type_bins = dict()
 
-    for model_name, model in trained_models.items():
+    for model_name, this_dtf in dtf_test.items():
 
         event_types[model_name] = dict()
         if return_partition:
             event_type_bins[model_name] = dict()
+
         print('Calculating event types for the {} model'.format(model_name))
-        for this_e_range, this_model in model.items():
+
+        dtf_e_test = bin_data_in_energy(this_dtf, log_e_reco_bins=log_e_bins)
+
+        for this_e_range, dtf_this_e in dtf_e_test.items():
 
             event_types[model_name][this_e_range] = defaultdict(list)
             event_types[model_name][this_e_range] = defaultdict(list)
 
-            # To keep lines short
-            dtf_this_e = dtf_e_test[this_model['test_data_suffix']][this_e_range]
-
-            X_test = dtf_this_e[this_model['train_features']].values
-            # Check if any value is inf (found one on a proton file...).
-            # If true, change it to a big negative or positive value.
-            if np.any(np.isinf(X_test)):
-                # Remove positive infs
-                X_test[X_test > 999999] = 999999
-                # Remove negative infs
-                X_test[X_test < -999999] = -999999
-
-            y_pred = this_model['model'].predict(X_test)
             event_types_bins = mstats.mquantiles(
-                y_pred,
+                dtf_this_e['y_pred'],
                 type_bins
             )
-            # If return_partition == True, then store the event type bins into the container.
+
+            # If return_partition is True, then store the event type bins into the container.
             if return_partition:
                 event_type_bins[model_name][this_e_range] = event_types_bins
-            # If return_partition == False and a event_type_bins container was provided, then use the values from
-            # the container.
+            # If return_partition is False and a event_type_bins container was provided,
+            # then use the values from the container.
+
             if not return_partition and event_type_bins is not None:
                 event_types_bins = event_type_bins[model_name][this_e_range]
 
-            for this_value in y_pred:
+            for this_value in dtf_this_e['y_pred']:
                 this_event_type = np.searchsorted(event_types_bins, this_value)
                 if this_event_type < 1:
                     this_event_type = 1
@@ -1232,13 +1281,17 @@ def partition_event_types(dtf_e_test, trained_models, n_types=2, type_bins='equa
                     this_event_type = n_types
                 event_types[model_name][this_e_range]['reco'].append(this_event_type)
 
-            for this_value in dtf_this_e[this_model['labels']].values:
+            for this_value in dtf_this_e[labels].values:
                 this_event_type = np.searchsorted(event_types_bins, this_value)
                 if this_event_type < 1:
                     this_event_type = 1
                 if this_event_type > n_types:
                     this_event_type = n_types
                 event_types[model_name][this_e_range]['true'].append(this_event_type)
+
+        for energy_key in dtf_e_test.keys():
+            this_dtf.loc[dtf_e_test[energy_key].index.values, 'event_type'] = (
+                event_types[model_name][energy_key]['reco'])
 
     if return_partition:
         return event_types, event_type_bins
@@ -1462,16 +1515,21 @@ def plot_test_vs_predict(dtf_e_test, trained_models, trained_model_name):
     fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=[14, 18])
 
     for i_plot, (this_e_range, this_model) in enumerate(trained_models.items()):
-
         # To keep lines short
         dtf_this_e = dtf_e_test[this_model['test_data_suffix']][this_e_range]
 
         X_test = dtf_this_e[this_model['train_features']].values
         y_test = dtf_this_e[this_model['labels']].values
 
+        if np.any(np.isinf(X_test)):
+            # Remove positive infs
+            X_test[X_test > 999999] = 999999
+            # Remove negative infs
+            X_test[X_test < -999999] = -999999
+
         y_pred = this_model['model'].predict(X_test)
 
-        ax = axs[int(np.floor((i_plot)/ncols)), (i_plot) % ncols]
+        ax = axs[int(np.floor(i_plot/ncols)), i_plot % ncols]
 
         ax.hist2d(y_pred, y_test, bins=(50, 50), cmap=plt.cm.jet)
         ax.plot(
@@ -1501,7 +1559,7 @@ def plot_test_vs_predict(dtf_e_test, trained_models, trained_model_name):
     return plt
 
 
-def plot_matrix(dtf, train_features, labels, n_types=2):
+def plot_matrix(dtf, train_features, labels, n_types=2, plot_events=20000):
     '''
     Plot a matrix of each variable in train_features against another (not all combinations).
     The data is divided to n_types bins of equal statistics based on the labels.
@@ -1519,8 +1577,9 @@ def plot_matrix(dtf, train_features, labels, n_types=2):
     labels: str
         Name of the variable used as the labels in the training.
     n_types: int (default=2)
-            The number of types to divide the data in.
-
+        The number of types to divide the data in.
+    plot_events: int (default=20000)
+        For efficiency, limit the number of events that will be used for the plots
 
     Returns
     -------
@@ -1529,8 +1588,12 @@ def plot_matrix(dtf, train_features, labels, n_types=2):
 
     setStyle()
 
-    dtf = add_event_type_column(dtf, labels, n_types)
+    # Check if event_type column already present within dtf:
+    if "event_type" not in dtf.columns:
+        dtf = add_event_type_column(dtf, labels, n_types)
 
+    # Mask out the events without a clear event type
+    dtf = dtf[dtf['event_type'] > 0]
     type_colors = {
         1: "#ba2c54",
         2: "#5B90DC",
@@ -1546,14 +1609,13 @@ def plot_matrix(dtf, train_features, labels, n_types=2):
     for these_vars in vars_to_plot:
         grid_plots.append(
             sns.pairplot(
-                dtf,
+                dtf.sample(n=plot_events),
                 vars=these_vars,
                 hue='event_type',
                 palette=type_colors,
                 corner=True
             )
         )
-
     return grid_plots
 
 
@@ -1607,6 +1669,12 @@ def plot_score_comparison(dtf_e_test, trained_models):
 
             X_test = dtf_this_e[this_model['train_features']].values
             y_test = dtf_this_e[this_model['labels']].values
+
+            if np.any(np.isinf(X_test)):
+                # Remove positive infs
+                X_test[X_test > 999999] = 999999
+                # Remove negative infs
+                X_test[X_test < -999999] = -999999
 
             y_pred = this_model['model'].predict(X_test)
 

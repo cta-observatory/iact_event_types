@@ -29,30 +29,46 @@ if __name__ == '__main__':
         )
         dtf = event_types.extract_df_from_dl2(dl2_file_name)
     else:
-        dtf = event_types.load_dtf('gamma_onSource.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0')
+        # Prod5 baseline (do not use anymore)
+        # dtf = event_types.load_dtf('gamma_onSource.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0')
+        # dtf = event_types.load_dtf('gamma_cone.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0')
+        # Prod5 CTA-N Threshold (beta)
+        # dtf = event_types.load_dtf('gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0')
+        # Prod5 Threshold (beta)
+        # dtf = event_types.load_dtf('gamma_onSource.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0')
+        dtf = event_types.load_dtf('gamma_cone.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0')
+        # Prod5 north (beta?)
+        # dtf = event_types.load_dtf('gamma_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0')
+        # dtf = event_types.load_dtf('gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0')
 
     # For the training, make sure we do not use events with cut_class == 7 (non gamma-like events)
-    dtf = dtf[dtf['cut_class'] != 7]
+    # dtf = dtf[dtf['cut_class'] != 7].dropna()
+    # try using cut_class == 7 (non gamma-like events)
+    dtf = dtf.dropna()
 
-    dtf_e = event_types.bin_data_in_energy(dtf)
+    dtf_e = event_types.bin_data_in_energy(dtf, n_bins=2)
 
-    dtf_e_train, dtf_e_test = event_types.split_data_train_test(dtf_e, random_state=777)
+    dtf_e_train, dtf_e_test = event_types.split_data_train_test(
+        dtf_e,
+        test_size=0.25,
+        random_state=777
+    )
 
     labels, train_features = event_types.nominal_labels_train_features()
 
     all_models = event_types.define_regressors()
     selected_models = [
-        # 'linear_regression',
+        'linear_regression',
+        # 'BDT',  # Do not use, performs bad and takes lots of disk space
+        # 'SVR',  # Do not use, performs bad and takes forever to apply
         # 'random_forest',  # Do not use, performs bad and takes lots of disk space
         # 'MLP_tanh',
         # 'MLP_relu',
-        'MLP_logistic',
+        # 'MLP_logistic',
         # 'MLP_uniform',
         # 'MLP_lbfgs',
-        # 'BDT',  # Do not use, performs bad and takes lots of disk space
         # 'BDT_small',  # Do not use, performs bad and takes lots of disk space
         # 'ridge',
-        # 'SVR',  # Do not use, performs bad and takes forever to apply
         # 'linear_SVR',
         # 'SGD',
     ]
