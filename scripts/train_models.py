@@ -13,6 +13,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     start_from_DL2 = False
+    save_some_events = False
+    
     if start_from_DL2:
         # Prod3b
         # dl2_file_name = (
@@ -37,8 +39,8 @@ if __name__ == '__main__':
         # dtf = event_types.load_dtf('gamma_onSource.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0')
         # dtf = event_types.load_dtf('gamma_cone.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0')
         # Prod5 north (beta?)
-        dtf = event_types.load_dtf('gamma_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0')
-        # dtf = event_types.load_dtf('gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0')
+        # dtf = event_types.load_dtf('gamma_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0')
+        dtf = event_types.load_dtf('gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0')
 
     # For the training, make sure we do not use events with cut_class == 7 (non gamma-like events)
     # dtf = dtf[dtf['cut_class'] != 7].dropna()
@@ -57,32 +59,44 @@ if __name__ == '__main__':
 
     all_models = event_types.define_regressors()
     selected_models = [
-        'linear_regression',
+        #'linear_regression',
         # 'BDT',  # Do not use, performs bad and takes lots of disk space
         # 'SVR',  # Do not use, performs bad and takes forever to apply
         # 'random_forest',  # Do not use, performs bad and takes lots of disk space
-        # 'MLP_tanh',
-        # 'MLP_relu',
-        # 'MLP_logistic',
-        # 'MLP_uniform',
-        # 'MLP_lbfgs',
+        'MLP_tanh',
+        #'MLP_relu',
+        #'MLP_logistic',
+        #'MLP_uniform',
+        #'MLP_lbfgs',
         # 'BDT_small',  # Do not use, performs bad and takes lots of disk space
-        # 'ridge',
-        # 'linear_SVR',
-        # 'SGD',
+        #'ridge',
+        #'linear_SVR',
+        #'SGD',
     ]
 
-    models_to_train = dict()
-    for this_model in selected_models:
-        models_to_train[this_model] = dict()
-        models_to_train[this_model]['train_features'] = train_features
-        models_to_train[this_model]['labels'] = labels
-        models_to_train[this_model]['model'] = all_models[this_model]
-        models_to_train[this_model]['test_data_suffix'] = 'default'
+    test_sizes = [
+        0.15,
+        0.25,
+        0.35,
+        0.45,
+    ]
 
-    trained_models = event_types.train_models(
-        dtf_e_train,
-        models_to_train
-    )
-    event_types.save_models(trained_models)
-    event_types.save_test_dtf(dtf_e_test)
+    for this_size in test_sizes:
+        dtf_e_train, dtf_e_test = event_types.split_data_train_test(
+            dtf_e,
+            test_size=this_size,
+            random_state=777
+        )
+        models_to_train = dict()
+        for this_model in selected_models:
+            models_to_train[this_model] = dict()
+            models_to_train[this_model]['train_features'] = train_features
+            models_to_train[this_model]['labels'] = labels
+            models_to_train[this_model]['model'] = all_models[this_model]
+            models_to_train[this_model]['test_data_suffix'] = str(this_size)
+        trained_models = event_types.train_models(
+            dtf_e_train,
+            models_to_train
+        )
+        event_types.save_models(trained_models, train_size=1-this_size)
+        event_types.save_test_dtf(dtf_e_test, suffix=str(this_size))

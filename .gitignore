@@ -130,3 +130,9 @@ dmypy.json
 
 # Pycharm temp files
 .idea/*
+
+# Folders with data
+reduced_data/
+plots/
+scores/
+models/

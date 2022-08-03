@@ -23,7 +23,7 @@ if __name__ == '__main__':
         )
         dtf = event_types.extract_df_from_dl2(dl2_file_name)
     else:
-        dtf = event_types.load_dtf()
+        dtf = event_types.load_dtf('gamma_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0')
 
     dtf_e = event_types.bin_data_in_energy(dtf)
 

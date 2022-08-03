@@ -918,10 +918,11 @@ def train_models(dtf_e_train, models_to_train):
     return models
 
 
-def save_models(trained_models):
+def save_models(trained_models, train_size=None):
     """
     Save the trained models to disk.
-    The path for the models is in models/'model name'.
+    The path for the models is in models/'model_name',
+    or models/'model_name'_train'train_size' in case the train size is specified.
     All models are saved per energy range for each model in trained_models.
 
     Parameters
@@ -939,6 +940,8 @@ def save_models(trained_models):
     """
 
     for model_name, this_model in trained_models.items():
+        if train_size != None:
+            model_name = model_name + '_train' + str(train_size)
         Path('models').joinpath(model_name).mkdir(parents=True, exist_ok=True)
         for this_e_range, model_now in this_model.items():
             e_range_name = this_e_range.replace(' < ', '-').replace(' ', '_')
@@ -1283,9 +1286,9 @@ def partition_event_types(dtf_test, labels, log_e_bins, n_types=2, type_bins='eq
                     this_event_type = n_types
                 event_types[model_name][this_e_range]['true'].append(this_event_type)
 
-        for energy_key in dtf_e_test.keys():
-            this_dtf.loc[dtf_e_test[energy_key].index.values, 'event_type'] = (
-                event_types[model_name][energy_key]['reco'])
+       # for energy_key in dtf_e_test.keys():
+       #     this_dtf.loc[dtf_e_test[energy_key].index.values, 'event_type'] = (
+       #         event_types[model_name][energy_key]['reco'])
 
     if return_partition:
         return event_types, event_type_bins

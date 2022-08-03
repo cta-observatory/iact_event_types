@@ -45,7 +45,7 @@ if __name__ == '__main__':
         models_to_train[features_name] = dict()
         models_to_train[features_name]['train_features'] = these_features
         models_to_train[features_name]['labels'] = labels
-        models_to_train[features_name]['model'] = all_models['MLP_small']
+        models_to_train[features_name]['model'] = all_models['linear_regression']
         models_to_train[features_name]['test_data_suffix'] = 'default'
 
     if start_from_DL2:
@@ -63,7 +63,7 @@ if __name__ == '__main__':
         )
         dtf = event_types.extract_df_from_dl2(dl2_file_name)
     else:
-        dtf = event_types.load_dtf()
+        dtf = event_types.load_dtf('gamma_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0')
 
     dtf_e = event_types.bin_data_in_energy(dtf)
 

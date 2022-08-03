@@ -18,10 +18,10 @@ if __name__ == '__main__':
 
     labels, train_features = event_types.nominal_labels_train_features()
 
-    plot_predict_dist = False
+    plot_predict_dist = True
     plot_scores = True
-    plot_confusion_matrix = False
-    plot_1d_conf_matrix = False
+    plot_confusion_matrix = True
+    plot_1d_conf_matrix = True
     n_types = 3
     type_bins = list(np.linspace(0, 1, n_types + 1))
     # type_bins = [0, 0.2, 0.8, 1]
@@ -29,9 +29,13 @@ if __name__ == '__main__':
     Path('plots').mkdir(parents=True, exist_ok=True)
 
     models_to_compare = [
-        # 'linear_regression',
+        #'linear_regression',
         # 'random_forest',
-        # 'MLP_tanh',
+        #'MLP_tanh',
+        'MLP_tanh_train0.85',
+        'MLP_tanh_train0.75',
+        'MLP_tanh_train0.65',
+        'MLP_tanh_train0.55',
         # 'MLP_relu',
         # 'MLP_logistic',
         # 'MLP_uniform',
@@ -43,13 +47,13 @@ if __name__ == '__main__':
         # 'linear_SVR',
         # 'SGD',
     ]
-    models_to_compare = [
-        'train_size_75p',
-        'train_size_50p',
-        'train_size_25p',
-        'train_size_15p',
-        'train_size_5p'
-    ]
+    #models_to_compare = [
+        #'train_size_75p',
+        #'train_size_50p',
+        #'train_size_25p',
+        #'train_size_15p',
+        #'train_size_5p'
+    #]
 
     if len(models_to_compare) > 1:
         group_models_to_compare = np.array_split(
@@ -95,7 +99,7 @@ if __name__ == '__main__':
             event_types.save_scores(scores)
 
         if plot_confusion_matrix:
-
+            
             event_types_lists = event_types.partition_event_types(
                 dtf_test,
                 labels,
