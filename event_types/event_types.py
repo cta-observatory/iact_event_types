@@ -363,6 +363,8 @@ def extract_df_from_dl2(root_filename):
         data_dict['log_ang_diff'].extend(tuple(np.log10(ang_diff)))
         data_dict['log_true_energy'].extend(tuple(np.log10(true_energy)))
         data_dict['log_reco_energy'].extend(tuple(np.log10(reco_energy)))
+        data_dict['x_off_mc'].extend(tuple(x_off_mc))
+        data_dict['y_off_mc'].extend(tuple(y_off_mc))
         data_dict['camera_offset'].extend(tuple(camera_offset))
         data_dict['log_NTels_reco'].extend(tuple(np.log10(NTels_reco)))
         data_dict['array_distance'].extend(tuple(array_distance))
@@ -676,7 +678,12 @@ def define_regressors():
 
     regressors = dict()
 
-    regressors['random_forest'] = RandomForestRegressor(n_estimators=300, random_state=0, n_jobs=8)
+    regressors['random_forest'] = RandomForestRegressor(
+        n_estimators=300,
+        max_depth=5,
+        random_state=0,
+        n_jobs=8
+    )
     regressors['MLP_relu'] = make_pipeline(
         preprocessing.QuantileTransformer(output_distribution='normal', random_state=0),
         MLPRegressor(
@@ -738,8 +745,8 @@ def define_regressors():
         )
     )
     regressors['BDT'] = AdaBoostRegressor(
-        DecisionTreeRegressor(max_depth=30, random_state=0),
-        n_estimators=30, random_state=0
+        DecisionTreeRegressor(max_depth=5, random_state=0),
+        n_estimators=50, random_state=0
     )
     regressors['BDT_small'] = AdaBoostRegressor(
         DecisionTreeRegressor(max_depth=30, random_state=0),
