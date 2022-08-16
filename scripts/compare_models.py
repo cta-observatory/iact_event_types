@@ -18,10 +18,10 @@ if __name__ == '__main__':
 
     labels, train_features = event_types.nominal_labels_train_features()
 
-    plot_predict_dist = True
+    plot_predict_dist = False
     plot_scores = True
-    plot_confusion_matrix = True
-    plot_1d_conf_matrix = True
+    plot_confusion_matrix = False
+    plot_1d_conf_matrix = False
     n_types = 3
     type_bins = list(np.linspace(0, 1, n_types + 1))
     # type_bins = [0, 0.2, 0.8, 1]
@@ -29,31 +29,31 @@ if __name__ == '__main__':
     Path('plots').mkdir(parents=True, exist_ok=True)
 
     models_to_compare = [
-        #'linear_regression',
-        # 'random_forest',
-        #'MLP_tanh',
-        'MLP_tanh_train0.85',
-        'MLP_tanh_train0.75',
-        'MLP_tanh_train0.65',
+        #'MLP_tanh_train0.75',
+        #'MLP_tanh_train0.65',
         'MLP_tanh_train0.55',
+        'MLP_tanh_train0.45',
+        'MLP_tanh_train0.35',
+        'MLP_tanh_train0.25',
+        #'MLP_tanh_train0.15',
         # 'MLP_relu',
-        # 'MLP_logistic',
-        # 'MLP_uniform',
-        # 'MLP_lbfgs',
-        # 'BDT',
-        # 'BDT_small',
-        # 'ridge',
-        # 'SVR',
-        # 'linear_SVR',
-        # 'SGD',
+        #'MLP_logistic_train0.75',
+        #'MLP_logistic_train0.65',
+        #'MLP_logistic_train0.55',
+        #'MLP_logistic_train0.45',
+        #'MLP_logistic_train0.35',
+        #'MLP_uniform_train0.55',
+        #'MLP_uniform_train0.45',
+        #'MLP_uniform_train0.35',
+        #'ridge_train0.55',
+        #'ridge_train0.45',
+        #'ridge_train0.35',
+        #'linear_SVR_train0.65',
+        #'SGD_train0.65',
+        #'SGD_train0.55',
+        #'SGD_train0.45',
+        #'SGD_train0.35',
     ]
-    #models_to_compare = [
-        #'train_size_75p',
-        #'train_size_50p',
-        #'train_size_25p',
-        #'train_size_15p',
-        #'train_size_5p'
-    #]
 
     if len(models_to_compare) > 1:
         group_models_to_compare = np.array_split(

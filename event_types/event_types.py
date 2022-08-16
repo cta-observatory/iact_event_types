@@ -1687,6 +1687,7 @@ def plot_score_comparison(dtf_e_test, trained_models):
     ax.set_xlabel('E [TeV]')
     ax.set_ylabel('score')
     ax.set_xscale('log')
+    ax.set_ylim([0,1])
     ax.legend()
     plt.tight_layout()
 

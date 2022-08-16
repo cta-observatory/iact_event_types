@@ -47,19 +47,13 @@ if __name__ == '__main__':
     # try using cut_class == 7 (non gamma-like events)
     dtf = dtf.dropna()
 
-    dtf_e = event_types.bin_data_in_energy(dtf, n_bins=2)
-
-    dtf_e_train, dtf_e_test = event_types.split_data_train_test(
-        dtf_e,
-        test_size=0.25,
-        random_state=777
-    )
+    dtf_e = event_types.bin_data_in_energy(dtf, n_bins=20)
 
     labels, train_features = event_types.nominal_labels_train_features()
 
     all_models = event_types.define_regressors()
     selected_models = [
-        #'linear_regression',
+        #'linear_regression', # Bad performace.
         # 'BDT',  # Do not use, performs bad and takes lots of disk space
         # 'SVR',  # Do not use, performs bad and takes forever to apply
         # 'random_forest',  # Do not use, performs bad and takes lots of disk space
@@ -67,7 +61,7 @@ if __name__ == '__main__':
         #'MLP_relu',
         #'MLP_logistic',
         #'MLP_uniform',
-        #'MLP_lbfgs',
+        #'MLP_lbfgs', # Bad performance
         # 'BDT_small',  # Do not use, performs bad and takes lots of disk space
         #'ridge',
         #'linear_SVR',
@@ -75,10 +69,14 @@ if __name__ == '__main__':
     ]
 
     test_sizes = [
-        0.15,
-        0.25,
+        #0.15,
+        #0.25,
         0.35,
         0.45,
+        0.55,
+        0.65,
+        #0.75,
+        #0.85
     ]
 
     for this_size in test_sizes:
