@@ -60,13 +60,8 @@ if __name__ == '__main__':
         print('Exporting file: {}'.format(dl2_file))
         dtf = event_types.load_dtf(dl2_file.replace('.root', ''))
         print('Total number of events: {}'.format(len(dtf)))
-        if 'gamma' in dl2_file:
-            # We separate cut class 7. Even if it was used for the model training, we want to define the event-type
-            # thresholds only using gamma-like events:
-            dtf_e = event_types.bin_data_in_energy(dtf[dtf['cut_class'] != 7], log_e_reco_bins=log_e_reco_bins)
-            dtf_7_e = event_types.bin_data_in_energy(dtf[dtf['cut_class'] == 7], log_e_reco_bins=log_e_reco_bins)
-        else:
-            dtf_e = event_types.bin_data_in_energy(dtf, log_e_reco_bins=log_e_reco_bins)
+
+        dtf_e = event_types.bin_data_in_energy(dtf, log_e_reco_bins=log_e_reco_bins)
 
         # We only separate training statistics in case of exporting a gamma_cone file.
         if 'gamma_cone' in dl2_file:
@@ -88,18 +83,6 @@ if __name__ == '__main__':
                 n_types=n_types,
                 return_partition=True
             )
-            # To match the format needed by partition_event_types
-            dtf_7_e_formatted = {'default': dtf_7_e}
-            # Calculate event types for the subsample of non-gamma-like gamma events (cut class 7), using the
-            # same event type thresholds as in the gamma-like gammas:
-            dtf_7_test = event_types.add_predict_column(dtf_7_e_formatted, trained_model)
-            d_types_7 = event_types.partition_event_types(
-                dtf_7_test,
-                labels=labels,
-                log_e_bins=event_type_log_e_bins,
-                n_types=n_types,
-                event_type_bins=event_type_partition
-            )
         else:
             # Calculate event types for proton and electron events, using the same event type thresholds as in the
             # gamma-like gammas:
@@ -119,8 +102,6 @@ if __name__ == '__main__':
         for energy_key in dtf_e_test.keys():
             if 'gamma_cone' in dl2_file:
                 dtf.loc[dtf_e_train[energy_key].index.values, 'event_type'] = -1
-        if 'gamma' in dl2_file:
-            dtf.loc[dtf_7_test['default'].index.values, 'event_type'] = dtf_7_test['default']['event_type']
         dtf.loc[dtf_test['default'].index.values, 'event_type'] = dtf_test['default']['event_type']
 
         print("A total of {} events will be written.".format(len(dtf['event_type'])))
