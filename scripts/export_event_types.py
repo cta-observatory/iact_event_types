@@ -23,13 +23,13 @@ if __name__ == '__main__':
         # 'electron_onSource.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0.root',
         # 'proton_onSource.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0.root'
         # Prod-5 full CTA-N array:
-        # 'gamma_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0.root',
-        # 'electron_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0.root',
-        # 'proton_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0.root'
+        'gamma_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0.root',
+        'electron_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0.root',
+        'proton_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0.root'
         # Prod-5 CTA-S threshold array:
-        'gamma_onSource.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0.root',
-        'electron_onSource.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0.root',
-        'proton_onSource.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0.root'
+        #'gamma_onSource.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0.root',
+        #'electron_onSource.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0.root',
+        #'proton_onSource.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0.root'
     ]
     if "gamma" not in dl2_file_list[0]:
         raise ValueError("The first DL2 file to analyze must be the gamma file, as we need it to comput the" +
@@ -37,7 +37,7 @@ if __name__ == '__main__':
 
     labels, train_features = event_types.nominal_labels_train_features()
 
-    selected_model = 'MLP_tanh'
+    selected_model = 'MLP_tanh_train0.45'
 
     trained_model = event_types.load_models([selected_model])
     # Get the energy binning from the trained model
@@ -47,6 +47,8 @@ if __name__ == '__main__':
     log_e_reco_bins = np.log10(
         event_types.extract_energy_bins(e_ranges)
     )
+    model = trained_model[next(iter(trained_model))]
+    suffix = model[next(iter(model))]['test_data_suffix']
 
     # Energy binning (in log10 TeV) used to separate event types. We use the binning usually used in
     # sensitivity curves, extended to lower and higher energies.
@@ -72,7 +74,7 @@ if __name__ == '__main__':
 
         if 'gamma' in dl2_file:
             # To match the format needed by partition_event_types
-            dtf_e_test_formatted = {'default': dtf_e_test}
+            dtf_e_test_formatted = {suffix: dtf_e_test}
             # Add the predicted Y_diff to the data frame:
             dtf_test = event_types.add_predict_column(dtf_e_test_formatted, trained_model)
             # Divide the Y_diff distributions into a discrete number of event types (n_types)
@@ -86,7 +88,7 @@ if __name__ == '__main__':
         else:
             # Calculate event types for proton and electron events, using the same event type thresholds as in the
             # gamma-like gammas:
-            dtf_e_formatted = {'default': dtf_e_test}
+            dtf_e_formatted = {suffix: dtf_e_test}
             dtf_test = event_types.add_predict_column(dtf_e_formatted, trained_model)
             d_types = event_types.partition_event_types(
                 dtf_test,
@@ -97,12 +99,11 @@ if __name__ == '__main__':
             )
         # Start creating the event_type column within the original dataframe:
         dtf['event_type'] = -99
-        # from IPython import embed
-        # embed()
+
         for energy_key in dtf_e_test.keys():
             if 'gamma_cone' in dl2_file:
                 dtf.loc[dtf_e_train[energy_key].index.values, 'event_type'] = -1
-        dtf.loc[dtf_test['default'].index.values, 'event_type'] = dtf_test['default']['event_type']
+        dtf.loc[dtf_test[suffix].index.values, 'event_type'] = dtf_test[suffix]['event_type']
 
         print("A total of {} events will be written.".format(len(dtf['event_type'])))
         for event_type in [-99, 1, 2, 3]:
