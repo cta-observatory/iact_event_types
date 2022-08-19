@@ -434,7 +434,7 @@ def save_dtf(dtf, suffix=''):
         The suffix to add to the file name
     """
 
-    this_dir = Path('reduced_data').mkdir(parents=True, exist_ok=True)
+    Path('reduced_data').mkdir(parents=True, exist_ok=True)
 
     if suffix != '':
         if not suffix.startswith('_'):
@@ -944,10 +944,11 @@ def save_models(trained_models, train_size=None):
             'train_features': list of variable names trained with.
             'labels': name of the variable used as the labels in the training.
             'test_data_suffix': suffix of the test dataset saved to disk.
+    train_size: percentage of the data used for training the model, so it can be included in the name.
     """
 
     for model_name, this_model in trained_models.items():
-        if train_size != None:
+        if train_size is not None:
             model_name = model_name + '_train' + str(train_size)
         Path('models').joinpath(model_name).mkdir(parents=True, exist_ok=True)
         for this_e_range, model_now in this_model.items():
@@ -1040,15 +1041,15 @@ def load_test_dtf(suffix='default'):
     return load(test_data_file_name)
 
 
-def load_multi_test_dtfs(data_names=['default']):
+def load_multi_test_dtfs(suffix=['default']):
     """
     Load the test data together with load_models().
     The path for the test data is in models/test_data.
 
     Parameters
     ----------
-    suffix: str
-        The suffix added to the file name (the nominal is dtf_e_test_default.joblib)
+    suffix: list of str
+        The suffix added to the file name (the nominal is dtf_e_test_default.joblib).
 
     Returns
     -------
@@ -1063,7 +1064,7 @@ def load_multi_test_dtfs(data_names=['default']):
     """
 
     dtf_e_test = dict()
-    for this_data_name in data_names:
+    for this_data_name in suffix:
         dtf_e_test[this_data_name] = load_test_dtf(this_data_name)
 
     return dtf_e_test
@@ -1104,10 +1105,7 @@ def load_models(model_names=list()):
             if this_file.is_file():
                 e_range_name = this_file.stem.replace('-', ' < ').replace('_', ' ')
 
-                model_file_name = Path('models').joinpath(
-                    model_name,
-                    '{}.joblib'.format(e_range_name)
-                )
+                Path('models').joinpath(model_name, '{}.joblib'.format(e_range_name))
                 trained_models[model_name][e_range_name] = load(this_file)
 
     return trained_models
@@ -1293,9 +1291,9 @@ def partition_event_types(dtf_test, labels, log_e_bins, n_types=2, type_bins='eq
                     this_event_type = n_types
                 event_types[model_name][this_e_range]['true'].append(this_event_type)
 
-       # for energy_key in dtf_e_test.keys():
-       #     this_dtf.loc[dtf_e_test[energy_key].index.values, 'event_type'] = (
-       #         event_types[model_name][energy_key]['reco'])
+        # for energy_key in dtf_e_test.keys():
+        #     this_dtf.loc[dtf_e_test[energy_key].index.values, 'event_type'] = (
+        #         event_types[model_name][energy_key]['reco'])
 
     if return_partition:
         return event_types, event_type_bins
@@ -1694,7 +1692,7 @@ def plot_score_comparison(dtf_e_test, trained_models):
     ax.set_xlabel('E [TeV]')
     ax.set_ylabel('score')
     ax.set_xscale('log')
-    ax.set_ylim([0,1])
+    ax.set_ylim([0, 1])
     ax.legend()
     plt.tight_layout()
 
