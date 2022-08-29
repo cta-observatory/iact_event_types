@@ -14,26 +14,33 @@ if __name__ == '__main__':
     )
 
     args = parser.parse_args()
-
-    # List of DL2 files from which we want to export event types
-    # IMPORTANT: Be aware that the gamma file goes first, as it will be used to calculate the event type threshlds.
-    dl2_file_list = [
-        # Prod-5 full CTA-S array:
-        # 'gamma_onSource.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0.root',
-        # 'electron_onSource.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0.root',
-        # 'proton_onSource.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0.root'
-        # Prod-5 full CTA-N array:
-        'gamma_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0.root',
-        'electron_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0.root',
-        'proton_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0.root'
-        # Prod-5 CTA-S threshold array:
-        #'gamma_onSource.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0.root',
-        #'electron_onSource.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0.root',
-        #'proton_onSource.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0.root'
+    
+    gamma = [
+        'gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0',
+        'gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-1',
+        'gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-2',
+        'gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-3',
+        'gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-4',
+        'gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-5',
     ]
-    if "gamma" not in dl2_file_list[0]:
-        raise ValueError("The first DL2 file to analyze must be the gamma file, as we need it to comput the" +
-                         "event type thresholds.")
+    electron = [
+        'electron.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0',
+        'electron.N.D25-4LSTs09MSTs-MSTN_ID0.eff-1',
+        'electron.N.D25-4LSTs09MSTs-MSTN_ID0.eff-2',
+        'electron.N.D25-4LSTs09MSTs-MSTN_ID0.eff-3',
+        'electron.N.D25-4LSTs09MSTs-MSTN_ID0.eff-4',
+        'electron.N.D25-4LSTs09MSTs-MSTN_ID0.eff-5',
+    ]
+    proton = [
+        'proton.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0',
+        'proton.N.D25-4LSTs09MSTs-MSTN_ID0.eff-1',
+        'proton.N.D25-4LSTs09MSTs-MSTN_ID0.eff-2',
+        'proton.N.D25-4LSTs09MSTs-MSTN_ID0.eff-3',
+        'proton.N.D25-4LSTs09MSTs-MSTN_ID0.eff-4',
+        'proton.N.D25-4LSTs09MSTs-MSTN_ID0.eff-5',
+    ]
+
+    particles = [gamma, electron, proton]
 
     labels, train_features = event_types.nominal_labels_train_features()
 
@@ -53,26 +60,30 @@ if __name__ == '__main__':
     # Energy binning (in log10 TeV) used to separate event types. We use the binning usually used in
     # sensitivity curves, extended to lower and higher energies.
     event_type_log_e_bins = np.arange(-1.7, 2.5, 0.2)
+    # Camera offset binning (in degrees) used to separate event types. The binning is a test, should be changed for
+    # better performance.
+    event_type_offset_bins = np.arange(0, 6, 1)
+    event_type_offset_bins = np.append(event_type_offset_bins, 10)
     # Number of event types we want to classify our data:
     n_types = 3
     # This variable will store the event type partitioning container.
     event_type_partition = None
 
-    for dl2_file in dl2_file_list:
-        print('Exporting file: {}'.format(dl2_file))
-        dtf = event_types.load_dtf(dl2_file.replace('.root', ''))
+    for particle in particles:
+        print('Exporting files: {}'.format(particle))
+        dtf = event_types.load_all_dtfs(particle)
         print('Total number of events: {}'.format(len(dtf)))
 
         dtf_e = event_types.bin_data_in_energy(dtf, log_e_reco_bins=log_e_reco_bins)
 
         # We only separate training statistics in case of exporting a gamma_cone file.
-        if 'gamma_cone' in dl2_file:
+        if particle is gamma:
             # Using a constant seed of 777, same as in the training/testing events
             dtf_e_train, dtf_e_test = event_types.split_data_train_test(dtf_e, random_state=777)
         else:
             dtf_e_test = dtf_e
 
-        if 'gamma' in dl2_file:
+        if particle is gamma:
             # To match the format needed by partition_event_types
             dtf_e_test_formatted = {suffix: dtf_e_test}
             # Add the predicted Y_diff to the data frame:

@@ -25,7 +25,7 @@ if __name__ == '__main__':
         )
         dtf = event_types.extract_df_from_dl2(dl2_file_name)
     else:
-        dtf = event_types.load_dtf('gamma_cone.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0')
+        dtf = event_types.load_dtf('gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0')
 
     dtf = dtf.dropna()
 

@@ -29,31 +29,27 @@ if __name__ == '__main__':
     Path('plots').mkdir(parents=True, exist_ok=True)
 
     models_to_compare = [
-        #'MLP_tanh_train0.75',
-        #'MLP_tanh_train0.65',
-        'MLP_tanh_train0.55',
-        'MLP_tanh_train0.45',
-        'MLP_tanh_train0.35',
-        'MLP_tanh_train0.25',
-        #'MLP_tanh_train0.15',
+        # 'linear_regression',
+        'random_forest',
+        'MLP_tanh',
         # 'MLP_relu',
-        #'MLP_logistic_train0.75',
-        #'MLP_logistic_train0.65',
-        #'MLP_logistic_train0.55',
-        #'MLP_logistic_train0.45',
-        #'MLP_logistic_train0.35',
-        #'MLP_uniform_train0.55',
-        #'MLP_uniform_train0.45',
-        #'MLP_uniform_train0.35',
-        #'ridge_train0.55',
-        #'ridge_train0.45',
-        #'ridge_train0.35',
-        #'linear_SVR_train0.65',
-        #'SGD_train0.65',
-        #'SGD_train0.55',
-        #'SGD_train0.45',
-        #'SGD_train0.35',
+        # 'MLP_logistic',
+        # 'MLP_uniform',
+        # 'MLP_lbfgs',
+        # 'BDT',
+        # 'BDT_small',
+        # 'ridge',
+        # 'SVR',
+        # 'linear_SVR',
+        # 'SGD',
     ]
+    # models_to_compare = [
+    #     'train_size_75p',
+    #     'train_size_50p',
+    #     'train_size_25p',
+    #     'train_size_15p',
+    #     'train_size_5p'
+    # ]
 
     if len(models_to_compare) > 1:
         group_models_to_compare = np.array_split(
@@ -100,13 +96,7 @@ if __name__ == '__main__':
 
         if plot_confusion_matrix:
             
-            event_types_lists = event_types.partition_event_types(
-                dtf_test,
-                labels,
-                log_e_reco_bins,
-                n_types,
-                type_bins
-            )
+            event_types_lists = event_types.partition_event_types(dtf_test, labels, log_e_reco_bins, n_types, type_bins)
             for this_trained_model_name, this_event_types in event_types_lists.items():
                 plt = event_types.plot_confusion_matrix(
                     this_event_types,

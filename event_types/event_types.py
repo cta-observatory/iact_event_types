@@ -473,6 +473,31 @@ def load_dtf(suffix=''):
     return load(data_file_name)
 
 
+def load_all_dtfs(suffix=['']):
+    """
+    Load the reduced data from reduced_data/ from multiple files into one DataFrame
+
+    Parameters
+    ----------
+    suffix: list of str
+        The suffix added to the file names (the nominal is dtf.joblib)
+
+    Returns
+    -------
+    dtf_merged: pandas DataFrames of the reduced data
+    """
+
+    n = len(suffix)
+    all_dtfs = [None] * n
+
+    for i in range(n):
+        all_dtfs[i] = load_dtf(suffix[i])
+
+    dtf_merged = pd.concat(all_dtfs)
+
+    return dtf_merged
+
+
 def bin_data_in_energy(dtf, n_bins=20, log_e_reco_bins=None, return_bins=False):
     """
     Bin the data in dtf to n_bins with equal statistics.
@@ -508,7 +533,7 @@ def bin_data_in_energy(dtf, n_bins=20, log_e_reco_bins=None, return_bins=False):
             continue
 
         mask = np.logical_and(
-            dtf['log_reco_energy'] > log_e_reco_bins[i_e_bin - 1],
+            dtf['log_reco_energy'] >= log_e_reco_bins[i_e_bin - 1],
             dtf['log_reco_energy'] < log_e_high
         )
         this_dtf = dtf[mask]
@@ -525,6 +550,85 @@ def bin_data_in_energy(dtf, n_bins=20, log_e_reco_bins=None, return_bins=False):
         return dtf_e, log_e_reco_bins
     else:
         return dtf_e
+
+
+def bin_data_in_energy_and_offset(dtf, n_bins=20, log_e_reco_bins=None, offset_bins=None, return_bins=False):
+    """
+    Bin the data in dtf to n_bins with equal statistics.
+
+    Parameters
+    ----------
+    dtf: pandas DataFrame
+        The DataFrame containing the data.
+        Must contain a 'log_reco_energy' column (used to calculate the bins).
+    n_bins: int, default=20
+        The number of reconstructed energy bins to divide the data in.
+    log_e_reco_bins: array-like, None
+        In case it is not none, it will be used as the energy bins to divide the data sample
+    offset_bins: array-like
+        Camera-offset bins (in degrees) to divide the data sample.
+
+    return_bins: bool
+        If true, the function will return the log_e_reco_bins used to bin the data.
+
+    Returns
+    -------
+    A dictionary of DataFrames (keys=energy ranges, values=separated DataFrames).
+    """
+
+    dtf_e_offset = dict()
+
+    if offset_bins is None:
+        raise ValueError('No offset_bins are inserted.')
+    elif offset_bins[0] != 0:
+        raise ValueError('The first value of offset_bins must be zero.')
+
+    if log_e_reco_bins is None:
+        log_e_reco_bins = mstats.mquantiles(
+            dtf['log_reco_energy'].values,
+            np.linspace(0, 1, n_bins)
+        )
+
+    for i_e_bin, log_e_high in enumerate(log_e_reco_bins):
+        if i_e_bin == 0:
+            continue
+
+        mask = np.logical_and(
+            dtf['log_reco_energy'] >= log_e_reco_bins[i_e_bin - 1],
+            dtf['log_reco_energy'] < log_e_high
+        )
+        this_dtf_e = dtf[mask]
+
+        this_e_range = '{:3.3f} < E < {:3.3f} TeV'.format(
+            10 ** log_e_reco_bins[i_e_bin - 1],
+            10 ** log_e_high
+        )
+        if len(this_dtf_e) < 1:
+            raise RuntimeError('The range {} is empty'.format(this_e_range))
+
+        for i_offset_bin, offset_high in enumerate(offset_bins):
+            if i_offset_bin == 0:
+                continue
+
+            mask = np.logical_and(
+                this_dtf_e['camera_offset'] >= offset_bins[i_offset_bin - 1],
+                this_dtf_e['camera_offset'] < offset_high
+            )
+            this_dtf_e_offset = this_dtf_e[mask]
+
+            this_offset_range = '{:2.2f} < camera_offset < {:2.2f} deg'.format(
+                offset_bins[i_offset_bin - 1],
+                offset_high
+            )
+            if len(this_dtf_e_offset) < 1:
+                raise RuntimeError('The range {}, {} is empty'.format(this_e_range, this_offset_range))
+
+            dtf_e_offset[this_e_range][this_offset_range] = this_dtf_e_offset
+
+    if return_bins:
+        return dtf_e_offset, log_e_reco_bins
+    else:
+        return dtf_e_offset
 
 
 def extract_energy_bins(e_ranges):
@@ -1183,7 +1287,7 @@ def add_predict_column(dtf_e_test, trained_models):
     return dtf_test_squashed
 
 
-def partition_event_types(dtf_test, labels, log_e_bins, n_types=2, type_bins='equal statistics',
+def partition_event_types(dtf_test, labels, log_e_bins, n_types=3, type_bins='equal statistics',
                           return_partition=False, event_type_bins=None):
     """
     Divide the events into n_types event types in each energy bin.
@@ -1200,10 +1304,10 @@ def partition_event_types(dtf_test, labels, log_e_bins, n_types=2, type_bins='eq
             Pandas DataFrames containing the test data and a column with the predicted values.
     labels: string
         The name of the label column used to train with.
-    log_e_bins: array like
+    log_e_bins: array-like
         A list of energy bins in which to divide the data into types.
         The bins are assumed to be the log values of the energy in TeV.
-    n_types: int (default=2)
+    n_types: int (default=3)
         The number of types to divide the data in.
     type_bins: list of floats or str
         A list defining the bin sizes of each type,
@@ -1291,9 +1395,134 @@ def partition_event_types(dtf_test, labels, log_e_bins, n_types=2, type_bins='eq
                     this_event_type = n_types
                 event_types[model_name][this_e_range]['true'].append(this_event_type)
 
-        # for energy_key in dtf_e_test.keys():
-        #     this_dtf.loc[dtf_e_test[energy_key].index.values, 'event_type'] = (
-        #         event_types[model_name][energy_key]['reco'])
+        for energy_key in dtf_e_test.keys():
+            this_dtf.loc[dtf_e_test[energy_key].index.values, 'event_type'] = (
+                event_types[model_name][energy_key]['reco'])
+
+    if return_partition:
+        return event_types, event_type_bins
+    else:
+        return event_types
+
+
+def partition_event_types_2(dtf_test, labels, log_e_bins, offset_bins=None, n_types=3, type_bins='equal statistics',
+                            return_partition=False, event_type_bins=None):
+    """
+    Divide the events into n_types event types in each energy bin.
+    The bins defining the types are calculated from the predicted label values,
+    assumed to be included already in dtf_test.
+    Two lists of types are returned per model and per energy range, one true and one predicted.
+
+    Parameters
+    ----------
+    dtf_test: a nested dict of test datasets per trained model
+        1st dict:
+            keys=test_data_suffix, values=2nd dict
+        2nd dict:
+            Pandas DataFrames containing the test data and a column with the predicted values.
+    labels: string
+        The name of the label column used to train with.
+    log_e_bins: array-like
+        A list of energy bins in which to divide the data into types.
+        The bins are assumed to be the log values of the energy in TeV.
+    offset_bins: array-like
+        A list of camera-offset bins (in degrees) in which to divide the data into types.
+    n_types: int (default=3)
+        The number of types to divide the data in.
+    type_bins: list of floats or str
+        A list defining the bin sizes of each type,
+        e.g., [0, 0.2, 0.8, 1] would divide the reconstructed labels dataset (angular error)
+        into three bins, best 20%, middle 60% and worst 20%.
+        The list must be n_types + 1 long and the first and last values must be zero and one.
+        The default is equal statistics bins, given as the default string.
+    return_partition: Bool
+        If true, a dictionary containing the partition values used for each model
+        and each energy bin will be returned.
+    event_type_bins: a nested dict of partition values per trained model and energy range
+        1st dict:
+            keys=model names, values=2nd dict
+        2nd dict:
+            keys=energy ranges, values=partition values array
+    Returns
+    -------
+    event_types: nested dict
+        1st dict:
+            keys=model names, values=2nd dict
+        2nd dict:
+            keys=energy ranges, values=3rd dict
+        3rd dict:
+            keys=true or reco, values=event type
+    """
+
+    event_types = dict()
+
+    if offset_bins is None:
+        offset_bins = [0, 10]
+
+    if type_bins == 'equal statistics':
+        type_bins = np.linspace(0, 1, n_types + 1)
+    elif not isinstance(type_bins, list):
+        raise ValueError('type_bins must be a list of floats or equal statistics')
+    elif len(type_bins) != n_types + 1:
+        raise ValueError('type_bins must be n_types + 1 long')
+    elif type_bins[0] != 0 or type_bins[-1] != 1:
+        raise ValueError('the first and last values of type_bins must be zero and one')
+    else:
+        pass
+
+    if return_partition:
+        event_type_bins = dict()
+
+    for model_name, this_dtf in dtf_test.items():
+
+        event_types[model_name] = dict()
+        if return_partition:
+            event_type_bins[model_name] = dict()
+
+        print('Calculating event types for the {} model'.format(model_name))
+
+        dtf_binned_test = bin_data_in_energy_and_offset(this_dtf, log_e_reco_bins=log_e_bins, offset_bins=offset_bins)
+
+        for this_e_range in dtf_binned_test.keys():
+            for this_offset_range, dtf_this_e_offset in dtf_binned_test[this_e_range].items():
+
+                event_types[model_name][this_e_range][this_offset_range] = defaultdict(list)
+                event_types[model_name][this_e_range][this_offset_range] = defaultdict(list)
+
+                event_types_bins = mstats.mquantiles(
+                    dtf_this_e_offset['y_pred'],
+                    type_bins
+                )
+
+                # If return_partition is True, then store the event type bins into the container.
+                if return_partition:
+                    event_type_bins[model_name][this_e_range][this_offset_range] = event_types_bins
+                # If return_partition is False and an event_type_bins container was provided,
+                # then use the values from the container.
+
+                if not return_partition and event_type_bins is not None:
+                    event_types_bins = event_type_bins[model_name][this_e_range][this_offset_range]
+
+                for this_value in dtf_this_e_offset['y_pred']:
+                    this_event_type = np.searchsorted(event_types_bins, this_value)
+                    if this_event_type < 1:
+                        this_event_type = 1
+                    if this_event_type > n_types:
+                        this_event_type = n_types
+                    event_types[model_name][this_e_range][this_offset_range]['reco'].append(this_event_type)
+
+                for this_value in dtf_this_e_offset[labels].values:
+                    this_event_type = np.searchsorted(event_types_bins, this_value)
+                    if this_event_type < 1:
+                        this_event_type = 1
+                    if this_event_type > n_types:
+                        this_event_type = n_types
+                    event_types[model_name][this_e_range][this_offset_range]['true'].append(this_event_type)
+
+        for energy_key in dtf_binned_test.keys():
+            for offset_key in dtf_binned_test[energy_key].keys():
+                this_dtf.loc[dtf_binned_test[energy_key][offset_key].index.values, 'event_type'] = (
+                    event_types[model_name][energy_key][offset_key]['reco'])
 
     if return_partition:
         return event_types, event_type_bins
@@ -1336,7 +1565,7 @@ def predicted_event_types(dtf_e_test, trained_models, n_types=2):
         1st dict:
             keys=model names, values=2nd dict
         2nd dict:
-            keys=energy ranges, values=3rddict
+            keys=energy ranges, values=3rd dict
         3rd dict:
             keys=true or reco, values=event type
     """

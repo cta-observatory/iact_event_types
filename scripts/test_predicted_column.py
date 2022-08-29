@@ -38,12 +38,8 @@ if __name__ == '__main__':
     # )
 
     # dtf_test['event_type'] = -99
-    event_types_now, event_type_thresholds = event_types.partition_event_types(
-        dtf_test,
-        labels=labels,
-        log_e_bins=log_e_reco_bins,
-        n_types=n_types,
-        return_partition=True
-    )
+    event_types_now, event_type_thresholds = event_types.partition_event_types(dtf_test, labels=labels,
+                                                                               log_e_bins=log_e_reco_bins,
+                                                                               n_types=n_types, return_partition=True)
     from IPython import embed
     embed()

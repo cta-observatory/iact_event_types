@@ -13,8 +13,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     start_from_DL2 = False
-    save_some_events = False
-    
     if start_from_DL2:
         # Prod3b
         # dl2_file_name = (
@@ -30,6 +28,14 @@ if __name__ == '__main__':
         )
         dtf = event_types.extract_df_from_dl2(dl2_file_name)
     else:
+        files = [
+            'gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0',
+            'gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-1',
+            'gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-2',
+            'gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-3',
+            'gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-4',
+            'gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-5',
+        ]
         # Prod5 baseline (do not use anymore)
         # dtf = event_types.load_dtf('gamma_onSource.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0')
         # dtf = event_types.load_dtf('gamma_cone.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0')
@@ -40,7 +46,12 @@ if __name__ == '__main__':
         # dtf = event_types.load_dtf('gamma_cone.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0')
         # Prod5 north (beta?)
         # dtf = event_types.load_dtf('gamma_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0')
-        dtf = event_types.load_dtf('gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0')
+
+        if len(files) == 1:
+            dtf = event_types.load_dtf(files[0])
+
+        else:
+            dtf = event_types.load_all_dtfs(files)
 
     # For the training, make sure we do not use events with cut_class == 7 (non gamma-like events)
     # dtf = dtf[dtf['cut_class'] != 7].dropna()
@@ -49,52 +60,42 @@ if __name__ == '__main__':
 
     dtf_e = event_types.bin_data_in_energy(dtf, n_bins=20)
 
+    dtf_e_train, dtf_e_test = event_types.split_data_train_test(
+        dtf_e,
+        test_size=0.25,
+        random_state=777
+    )
+
     labels, train_features = event_types.nominal_labels_train_features()
 
     all_models = event_types.define_regressors()
     selected_models = [
-        #'linear_regression', # Bad performace.
-        # 'BDT',  # Do not use, performs bad and takes lots of disk space
+        # 'linear_regression',
+        # 'BDT',
         # 'SVR',  # Do not use, performs bad and takes forever to apply
-        # 'random_forest',  # Do not use, performs bad and takes lots of disk space
+        'random_forest',
         'MLP_tanh',
-        #'MLP_relu',
-        #'MLP_logistic',
-        #'MLP_uniform',
-        #'MLP_lbfgs', # Bad performance
-        # 'BDT_small',  # Do not use, performs bad and takes lots of disk space
-        #'ridge',
-        #'linear_SVR',
-        #'SGD',
+        # 'MLP_relu',
+        # 'MLP_logistic',
+        # 'MLP_uniform',
+        # 'MLP_lbfgs',
+        # 'BDT_small',
+        # 'ridge',
+        # 'linear_SVR',
+        # 'SGD',
     ]
 
-    test_sizes = [
-        #0.15,
-        #0.25,
-        0.35,
-        0.45,
-        0.55,
-        0.65,
-        #0.75,
-        #0.85
-    ]
+    models_to_train = dict()
+    for this_model in selected_models:
+        models_to_train[this_model] = dict()
+        models_to_train[this_model]['train_features'] = train_features
+        models_to_train[this_model]['labels'] = labels
+        models_to_train[this_model]['model'] = all_models[this_model]
+        models_to_train[this_model]['test_data_suffix'] = 'default'
 
-    for this_size in test_sizes:
-        dtf_e_train, dtf_e_test = event_types.split_data_train_test(
-            dtf_e,
-            test_size=this_size,
-            random_state=777
-        )
-        models_to_train = dict()
-        for this_model in selected_models:
-            models_to_train[this_model] = dict()
-            models_to_train[this_model]['train_features'] = train_features
-            models_to_train[this_model]['labels'] = labels
-            models_to_train[this_model]['model'] = all_models[this_model]
-            models_to_train[this_model]['test_data_suffix'] = str(this_size)
-        trained_models = event_types.train_models(
-            dtf_e_train,
-            models_to_train
-        )
-        event_types.save_models(trained_models, train_size=1-this_size)
-        event_types.save_test_dtf(dtf_e_test, suffix=str(this_size))
+    trained_models = event_types.train_models(
+        dtf_e_train,
+        models_to_train
+    )
+    event_types.save_models(trained_models)
+    event_types.save_test_dtf(dtf_e_test)

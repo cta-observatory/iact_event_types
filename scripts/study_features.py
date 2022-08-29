@@ -45,7 +45,7 @@ if __name__ == '__main__':
         models_to_train[features_name] = dict()
         models_to_train[features_name]['train_features'] = these_features
         models_to_train[features_name]['labels'] = labels
-        models_to_train[features_name]['model'] = all_models['linear_regression']
+        models_to_train[features_name]['model'] = all_models['random_forest']
         models_to_train[features_name]['test_data_suffix'] = 'default'
 
     if start_from_DL2:
