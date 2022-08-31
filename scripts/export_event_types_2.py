@@ -14,7 +14,7 @@ if __name__ == '__main__':
     )
 
     args = parser.parse_args()
-    
+
     gamma = [
         'gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0',
         'gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-1',
@@ -63,7 +63,7 @@ if __name__ == '__main__':
     # Camera offset binning (in degrees) used to separate event types. The binning is a test, should be changed for
     # better performance.
     event_type_offset_bins = np.arange(0, 6, 1)
-    event_type_offset_bins = np.append(event_type_offset_bins, 10)
+    # event_type_offset_bins = np.append(event_type_offset_bins, 10)
     # Number of event types we want to classify our data:
     n_types = 3
     # This variable will store the event type partitioning container.
@@ -74,47 +74,50 @@ if __name__ == '__main__':
         dtf = event_types.load_all_dtfs(particle)
         print('Total number of events: {}'.format(len(dtf)))
 
+        # We only bin in energy here to have the same file as in the training and be able to de exact same
+        # training/testing events' separation.
         dtf_e = event_types.bin_data_in_energy(dtf, log_e_reco_bins=log_e_reco_bins)
 
         # We only separate training statistics in case of exporting a gamma_cone file.
         if particle is gamma:
-            # Using a constant seed of 777, same as in the training/testing events
+            # Using a constant seed of 777, same as in the training/testing events.
             dtf_e_train, dtf_e_test = event_types.split_data_train_test(dtf_e, random_state=777)
         else:
             dtf_e_test = dtf_e
 
+        # To match the format needed by partition_event_types
+        dtf_e_test_formatted = {suffix: dtf_e_test}
+        # Add the predicted Y_diff to the data frame:
+        dtf_test = event_types.add_predict_column(dtf_e_test_formatted, trained_model)
+
         if particle is gamma:
-            # To match the format needed by partition_event_types
-            dtf_e_test_formatted = {suffix: dtf_e_test}
-            # Add the predicted Y_diff to the data frame:
-            dtf_test = event_types.add_predict_column(dtf_e_test_formatted, trained_model)
             # Divide the Y_diff distributions into a discrete number of event types (n_types)
-            d_types, event_type_partition = event_types.partition_event_types(dtf_test, labels=labels,
-                                                                              log_e_bins=event_type_log_e_bins,
-                                                                              n_types=n_types, return_partition=True)
+            d_types, event_type_partition = event_types.partition_event_types_2(dtf_test, labels=labels,
+                                                                                log_e_bins=event_type_log_e_bins,
+                                                                                offset_bins=event_type_offset_bins,
+                                                                                n_types=n_types, return_partition=True)
         else:
             # Calculate event types for proton and electron events, using the same event type thresholds as in the
             # gamma-like gammas:
-            dtf_e_formatted = {suffix: dtf_e_test}
-            dtf_test = event_types.add_predict_column(dtf_e_formatted, trained_model)
-            d_types = event_types.partition_event_types(dtf_test, labels=labels, log_e_bins=event_type_log_e_bins,
-                                                        n_types=n_types, event_type_bins=event_type_partition)
+            d_types = event_types.partition_event_types_2(dtf_test, labels=labels, log_e_bins=event_type_log_e_bins,
+                                                          offset_bins=event_type_offset_bins, n_types=n_types,
+                                                          event_type_bins=event_type_partition)
         # Start creating the event_type column within the original dataframe:
         dtf['event_type'] = -99
 
         for energy_key in dtf_e_test.keys():
-            if 'gamma_cone' in dl2_file:
+            if particle is gamma:
                 dtf.loc[dtf_e_train[energy_key].index.values, 'event_type'] = -1
-        dtf.loc[dtf_test[suffix].index.values, 'event_type'] = d_types[suffix][energy_key]['reco']
+        dtf.loc[dtf_test[suffix].index.values, 'event_type'] = d_types[suffix]['event_type']
 
         print("A total of {} events will be written.".format(len(dtf['event_type'])))
-        dtf_7 = dtf[dtf['cut_class']!=7]
+        dtf_7 = dtf[dtf['cut_class'] != 7]
         for event_type in [-99, 1, 2, 3]:
             print("A total of {} events of type {}".format(np.sum(dtf['event_type'] == event_type), event_type))
             print("A total of {} events of type {} for gamma-like events".format(
                 np.sum(dtf_7['event_type'] == event_type), event_type
             ))
 
-        with open(dl2_file.replace('.root', '.txt'), 'w') as txt_file:
+        with open(particle[0].replace('.eff-0', '.txt'), 'w') as txt_file:
             for value in dtf['event_type']:
                 txt_file.write('{}\n'.format(value))

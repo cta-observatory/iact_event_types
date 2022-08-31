@@ -72,11 +72,12 @@ if __name__ == '__main__':
         else:
             dtf_e_test = dtf_e
 
+        # To match the format needed by partition_event_types
+        dtf_e_test_formatted = {suffix: dtf_e_test}
+        # Add the predicted Y_diff to the data frame:
+        dtf_test = event_types.add_predict_column(dtf_e_test_formatted, trained_model)
+
         if 'gamma' in dl2_file:
-            # To match the format needed by partition_event_types
-            dtf_e_test_formatted = {suffix: dtf_e_test}
-            # Add the predicted Y_diff to the data frame:
-            dtf_test = event_types.add_predict_column(dtf_e_test_formatted, trained_model)
             # Divide the Y_diff distributions into a discrete number of event types (n_types)
             d_types, event_type_partition = event_types.partition_event_types(dtf_test, labels=labels,
                                                                               log_e_bins=event_type_log_e_bins,
@@ -84,8 +85,6 @@ if __name__ == '__main__':
         else:
             # Calculate event types for proton and electron events, using the same event type thresholds as in the
             # gamma-like gammas:
-            dtf_e_formatted = {suffix: dtf_e_test}
-            dtf_test = event_types.add_predict_column(dtf_e_formatted, trained_model)
             d_types = event_types.partition_event_types(dtf_test, labels=labels, log_e_bins=event_type_log_e_bins,
                                                         n_types=n_types, event_type_bins=event_type_partition)
         # Start creating the event_type column within the original dataframe:
@@ -94,7 +93,7 @@ if __name__ == '__main__':
         for energy_key in dtf_e_test.keys():
             if 'gamma_cone' in dl2_file:
                 dtf.loc[dtf_e_train[energy_key].index.values, 'event_type'] = -1
-        dtf.loc[dtf_test[suffix].index.values, 'event_type'] = d_types[suffix][energy_key]['reco']
+        dtf.loc[dtf_test[suffix].index.values, 'event_type'] = d_types[suffix]['event_type']
 
         print("A total of {} events will be written.".format(len(dtf['event_type'])))
         dtf_7 = dtf[dtf['cut_class']!=7]

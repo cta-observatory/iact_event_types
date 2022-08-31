@@ -493,7 +493,7 @@ def load_all_dtfs(suffix=['']):
     for i in range(n):
         all_dtfs[i] = load_dtf(suffix[i])
 
-    dtf_merged = pd.concat(all_dtfs)
+    dtf_merged = pd.concat(all_dtfs, ignore_index=True)
 
     return dtf_merged
 
@@ -687,7 +687,7 @@ def extract_energy_bins_centers(e_ranges):
     return energy_bin_centers
 
 
-def split_data_train_test(dtf_e, test_size=0.75, random_state=75):
+def split_data_train_test(dtf_e, test_size=0.75, random_state=777):
     """
     Split the data into training and testing datasets.
     The data is split in each energy range separately with 'test_size'
@@ -782,7 +782,7 @@ def define_regressors():
 
     regressors['random_forest'] = RandomForestRegressor(
         n_estimators=300,
-        max_depth=5,
+        max_depth=10,
         random_state=0,
         n_jobs=8
     )
@@ -1282,7 +1282,9 @@ def add_predict_column(dtf_e_test, trained_models):
 
             dtf_this_e.loc[:, 'y_pred'] = y_pred
 
-        dtf_test_squashed[this_model['test_data_suffix']] = pd.concat(list_of_dtfs)
+        # ignore_index needs to be true, so that the df.loc we run later on does not find
+        # several entries for a given index.
+        dtf_test_squashed[this_model['test_data_suffix']] = pd.concat(list_of_dtfs, ignore_index=True)
 
     return dtf_test_squashed
 

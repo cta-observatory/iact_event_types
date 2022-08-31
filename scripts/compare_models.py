@@ -18,10 +18,10 @@ if __name__ == '__main__':
 
     labels, train_features = event_types.nominal_labels_train_features()
 
-    plot_predict_dist = False
+    plot_predict_dist = True
     plot_scores = True
-    plot_confusion_matrix = False
-    plot_1d_conf_matrix = False
+    plot_confusion_matrix = True
+    plot_1d_conf_matrix = True
     n_types = 3
     type_bins = list(np.linspace(0, 1, n_types + 1))
     # type_bins = [0, 0.2, 0.8, 1]
