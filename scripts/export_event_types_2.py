@@ -24,7 +24,7 @@ if __name__ == '__main__':
         'gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-5',
     ]
     electron = [
-        'electron.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0',
+        'electron_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0',
         'electron.N.D25-4LSTs09MSTs-MSTN_ID0.eff-1',
         'electron.N.D25-4LSTs09MSTs-MSTN_ID0.eff-2',
         'electron.N.D25-4LSTs09MSTs-MSTN_ID0.eff-3',
@@ -32,7 +32,7 @@ if __name__ == '__main__':
         'electron.N.D25-4LSTs09MSTs-MSTN_ID0.eff-5',
     ]
     proton = [
-        'proton.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0',
+        'proton_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0',
         'proton.N.D25-4LSTs09MSTs-MSTN_ID0.eff-1',
         'proton.N.D25-4LSTs09MSTs-MSTN_ID0.eff-2',
         'proton.N.D25-4LSTs09MSTs-MSTN_ID0.eff-3',
@@ -105,10 +105,11 @@ if __name__ == '__main__':
         # Start creating the event_type column within the original dataframe:
         dtf['event_type'] = -99
 
-        for energy_key in dtf_e_test.keys():
-            if particle is gamma:
+        if particle is gamma:
+            for energy_key in dtf_e_test.keys():
                 dtf.loc[dtf_e_train[energy_key].index.values, 'event_type'] = -1
-        dtf.loc[dtf_test[suffix].index.values, 'event_type'] = d_types[suffix]['event_type']
+        
+        dtf.loc[dtf_test[suffix].index.values, 'event_type'] = dtf_test[suffix]['event_type']
 
         print("A total of {} events will be written.".format(len(dtf['event_type'])))
         dtf_7 = dtf[dtf['cut_class'] != 7]
@@ -117,7 +118,8 @@ if __name__ == '__main__':
             print("A total of {} events of type {} for gamma-like events".format(
                 np.sum(dtf_7['event_type'] == event_type), event_type
             ))
-
-        with open(particle[0].replace('.eff-0', '.txt'), 'w') as txt_file:
+        
+        file_name = particle[0].replace('.eff-0', '.txt').replace('_cone', '').replace('_onSource', '')
+        with open(file_name, 'w') as txt_file:
             for value in dtf['event_type']:
                 txt_file.write('{}\n'.format(value))

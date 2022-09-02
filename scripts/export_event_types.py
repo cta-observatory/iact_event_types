@@ -93,7 +93,7 @@ if __name__ == '__main__':
         for energy_key in dtf_e_test.keys():
             if 'gamma_cone' in dl2_file:
                 dtf.loc[dtf_e_train[energy_key].index.values, 'event_type'] = -1
-        dtf.loc[dtf_test[suffix].index.values, 'event_type'] = d_types[suffix]['event_type']
+        dtf.loc[dtf_test[suffix].index.values, 'event_type'] = dtf_test[suffix]['event_type']
 
         print("A total of {} events will be written.".format(len(dtf['event_type'])))
         dtf_7 = dtf[dtf['cut_class']!=7]

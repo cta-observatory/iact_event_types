@@ -606,6 +606,8 @@ def bin_data_in_energy_and_offset(dtf, n_bins=20, log_e_reco_bins=None, offset_b
         if len(this_dtf_e) < 1:
             raise RuntimeError('The range {} is empty'.format(this_e_range))
 
+        dtf_e_offset[this_e_range] = dict()
+
         for i_offset_bin, offset_high in enumerate(offset_bins):
             if i_offset_bin == 0:
                 continue
@@ -1476,7 +1478,6 @@ def partition_event_types_2(dtf_test, labels, log_e_bins, offset_bins=None, n_ty
         event_type_bins = dict()
 
     for model_name, this_dtf in dtf_test.items():
-
         event_types[model_name] = dict()
         if return_partition:
             event_type_bins[model_name] = dict()
@@ -1486,6 +1487,9 @@ def partition_event_types_2(dtf_test, labels, log_e_bins, offset_bins=None, n_ty
         dtf_binned_test = bin_data_in_energy_and_offset(this_dtf, log_e_reco_bins=log_e_bins, offset_bins=offset_bins)
 
         for this_e_range in dtf_binned_test.keys():
+            event_types[model_name][this_e_range] = dict()
+            if return_partition:
+                event_type_bins[model_name][this_e_range] = dict()
             for this_offset_range, dtf_this_e_offset in dtf_binned_test[this_e_range].items():
 
                 event_types[model_name][this_e_range][this_offset_range] = defaultdict(list)
@@ -1501,7 +1505,6 @@ def partition_event_types_2(dtf_test, labels, log_e_bins, offset_bins=None, n_ty
                     event_type_bins[model_name][this_e_range][this_offset_range] = event_types_bins
                 # If return_partition is False and an event_type_bins container was provided,
                 # then use the values from the container.
-
                 if not return_partition and event_type_bins is not None:
                     event_types_bins = event_type_bins[model_name][this_e_range][this_offset_range]
 
