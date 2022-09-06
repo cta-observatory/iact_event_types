@@ -62,7 +62,7 @@ if __name__ == '__main__':
     event_type_log_e_bins = np.arange(-1.7, 2.5, 0.2)
     # Camera offset binning (in degrees) used to separate event types. The binning is a test, should be changed for
     # better performance.
-    event_type_offset_bins = np.arange(0, 6, 1)
+    event_type_offset_bins = np.arange(0, 7, 1)
     # event_type_offset_bins = np.append(event_type_offset_bins, 10)
     # Number of event types we want to classify our data:
     n_types = 3
@@ -102,22 +102,32 @@ if __name__ == '__main__':
             d_types = event_types.partition_event_types_2(dtf_test, labels=labels, log_e_bins=event_type_log_e_bins,
                                                           offset_bins=event_type_offset_bins, n_types=n_types,
                                                           event_type_bins=event_type_partition)
-        # Start creating the event_type column within the original dataframe:
-        dtf['event_type'] = -99
+        # Start creating the event_type column within the original dataframe, setting the default value: -3.
+        # There shouldn't be many -3s at the end. If that's the case, it must be understood.
+        dtf['event_type'] = -3
 
         if particle is gamma:
-            for energy_key in dtf_e_test.keys():
+            # Assign type -1 to the events used for the training.
+            for energy_key in dtf_e_train.keys():
                 dtf.loc[dtf_e_train[energy_key].index.values, 'event_type'] = -1
         
         dtf.loc[dtf_test[suffix].index.values, 'event_type'] = dtf_test[suffix]['event_type']
 
         print("A total of {} events will be written.".format(len(dtf['event_type'])))
         dtf_7 = dtf[dtf['cut_class'] != 7]
-        for event_type in [-99, 1, 2, 3]:
+        for event_type in [-3, -2, -1, 1, 2, 3]:
             print("A total of {} events of type {}".format(np.sum(dtf['event_type'] == event_type), event_type))
             print("A total of {} events of type {} for gamma-like events".format(
                 np.sum(dtf_7['event_type'] == event_type), event_type
             ))
+        # Summary:
+        # Types 1, 2 and 3 are actual reconstructed event types, where 1 is the best type and all three sould
+        # have similar statistics.
+        # Type -1 is assigned to the train sample.
+        # Type -2 is the default value when assigning event types to the test sample in partition_event_types_2.
+        # As that function works for each bin of energy and offset, events outside these bins will have type -2.
+        # Type -3 is the default value for the complete tables of each particle.
+        # i.e. events with no other type assigned.
         
         file_name = particle[0].replace('.eff-0', '.txt').replace('_cone', '').replace('_onSource', '')
         with open(file_name, 'w') as txt_file:

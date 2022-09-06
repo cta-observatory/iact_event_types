@@ -1286,7 +1286,7 @@ def add_predict_column(dtf_e_test, trained_models):
 
         # ignore_index needs to be true, so that the df.loc we run later on does not find
         # several entries for a given index.
-        dtf_test_squashed[this_model['test_data_suffix']] = pd.concat(list_of_dtfs, ignore_index=True)
+        dtf_test_squashed[this_model['test_data_suffix']] = pd.concat(list_of_dtfs)
 
     return dtf_test_squashed
 
@@ -1367,7 +1367,6 @@ def partition_event_types(dtf_test, labels, log_e_bins, n_types=3, type_bins='eq
         for this_e_range, dtf_this_e in dtf_e_test.items():
 
             event_types[model_name][this_e_range] = defaultdict(list)
-            event_types[model_name][this_e_range] = defaultdict(list)
 
             event_types_bins = mstats.mquantiles(
                 dtf_this_e['y_pred'],
@@ -1399,6 +1398,10 @@ def partition_event_types(dtf_test, labels, log_e_bins, n_types=3, type_bins='eq
                     this_event_type = n_types
                 event_types[model_name][this_e_range]['true'].append(this_event_type)
 
+        # When adding the new column, set default value to -2.
+        # If there are -2 values at the end, it means those indexes weren't filled here,
+        # i.e. those events are not in the defined energy/offset bins.
+        this_dtf['event_type'] = -2
         for energy_key in dtf_e_test.keys():
             this_dtf.loc[dtf_e_test[energy_key].index.values, 'event_type'] = (
                 event_types[model_name][energy_key]['reco'])
@@ -1524,6 +1527,11 @@ def partition_event_types_2(dtf_test, labels, log_e_bins, offset_bins=None, n_ty
                         this_event_type = n_types
                     event_types[model_name][this_e_range][this_offset_range]['true'].append(this_event_type)
 
+        # When adding the new column, set default value to -2.
+        # If there are -2 values at the end, it means those indexes weren't filled here,
+        # i.e. those events are not in the defined energy/offset bins.
+        this_dtf['event_type'] = -2
+        # Fill 'event_type' column with the right event types, using the 'reco' dict.
         for energy_key in dtf_binned_test.keys():
             for offset_key in dtf_binned_test[energy_key].keys():
                 this_dtf.loc[dtf_binned_test[energy_key][offset_key].index.values, 'event_type'] = (
