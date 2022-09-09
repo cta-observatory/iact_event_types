@@ -1,5 +1,6 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
+
 setup(
-    name='event_types',
+    name="event_types",
     packages=find_packages(),
 )
