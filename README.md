@@ -19,6 +19,18 @@ Once the package is set up, next time just run
 
 ```source activate event_types```
 
+Developers should make use of the pre-commit functionality, which tests and applies python style fixes using black and flakes8. To use pre-commit, run the following command after completing the setup process above:
+
+```pre-commit install```
+
+For testing, pre-commit can be applied locally without commit:
+
+```pre-commit run --all-files```
+
+In rare cases, one might want to skip pre-commit checks with
+
+```git commit --no-verify```
+
 # Requirements
 
 Please note this is still work in progress. Documentation is outdated and clearly lacking.
@@ -31,5 +43,3 @@ A description of their content and links to download them can be found here:
 The easiest way to download them is here:
 * https://ccdcacli236.in2p3.fr:2880/vo.cta.in2p3.fr/MC/PROD3/DL2_evndisp/Paranal_20deg/
 * https://ccdcacli236.in2p3.fr:2880/vo.cta.in2p3.fr/MC/PROD3/DL2_evndisp/LaPalma_20deg/
-
-
