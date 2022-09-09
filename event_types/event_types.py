@@ -1340,6 +1340,7 @@ def partition_event_types(
     labels,
     log_e_bins,
     n_types=3,
+
     type_bins="equal statistics",
     return_partition=False,
     event_type_bins=None,
@@ -1598,6 +1599,7 @@ def partition_event_types_offsetwise(
                 this_dtf.loc[
                     dtf_binned_test[energy_key][offset_key].index.values, "event_type"
                 ] = event_types[model_name][energy_key][offset_key]["reco"]
+
 
     if return_partition:
         return event_types, event_type_bins
