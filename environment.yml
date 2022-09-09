@@ -1,19 +1,20 @@
   # A conda environment with packages necessary for event types study
-name: event-types
+name: event_types
 channels:
   - default
 dependencies:
-  - python=3.8.5
+  - python
   - pip
   - ipython
   - jupyter
-  - numpy>=1.17
+  - numpy
   - numpydoc
   - matplotlib
   - pytables
   - pandas
-  - time
   - astropy
   - scikit-learn
   - seaborn
   - conda-forge::uproot
+  - pre-commit
+  - pyflakes

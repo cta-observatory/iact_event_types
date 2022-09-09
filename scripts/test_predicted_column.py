@@ -1,16 +1,16 @@
-import numpy as np
 import argparse
-from pathlib import Path
-from scipy.stats import mstats
+
+import numpy as np
+
 from event_types import event_types
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         description=(
-            'An example script how to load trained models.'
-            'Remember not to use the data used to train these models.'
-            'In future perhaps also the test data will be saved.'
+            "An example script how to load trained models."
+            "Remember not to use the data used to train these models."
+            "In future perhaps also the test data will be saved."
         )
     )
 
@@ -22,7 +22,7 @@ if __name__ == '__main__':
     type_bins = list(np.linspace(0, 1, n_types + 1))
 
     models_to_compare = [
-        'MLP_tanh',
+        "MLP_tanh",
     ]
 
     trained_models = event_types.load_models(models_to_compare)
@@ -32,14 +32,11 @@ if __name__ == '__main__':
     dtf_test = event_types.add_predict_column(dtf_e_test, trained_models)
     # Usual binning used in sensitivity curves, extended to lower and higher energies.
     log_e_reco_bins = np.arange(-2.1, 2.5, 0.2)
-    # log_e_reco_bins = mstats.mquantiles(
-    #     dtf_test['default']['log_reco_energy'].values,
-    #     np.linspace(0, 1, 11)
-    # )
 
     # dtf_test['event_type'] = -99
-    event_types_now, event_type_thresholds = event_types.partition_event_types(dtf_test, labels=labels,
-                                                                               log_e_bins=log_e_reco_bins,
-                                                                               n_types=n_types, return_partition=True)
+    event_types_now, event_type_thresholds = event_types.partition_event_types(
+        dtf_test, labels=labels, log_e_bins=log_e_reco_bins, n_types=n_types, return_partition=True
+    )
     from IPython import embed
+
     embed()
