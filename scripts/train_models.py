@@ -43,12 +43,17 @@ if __name__ == "__main__":
         # 'linear_regression',
         # 'BDT',
         # 'SVR',  # Do not use, performs bad and takes forever to apply
-        "random_forest",
+        # "random_forest_300_15",
+        # "random_forest_300_20",
+        # "random_forest_500_15",
+        # "random_forest_500_20",
+        # "random_forest_2000_5",
         "MLP_tanh",
         # 'MLP_relu',
         # 'MLP_logistic',
         # 'MLP_uniform',
-        # 'MLP_lbfgs',
+        # 'MLP_lbfgs',  # Do not use, very slow to train
+        # 'MLP_tanh_large',
         # 'BDT_small',
         # 'ridge',
         # 'linear_SVR',
@@ -65,4 +70,4 @@ if __name__ == "__main__":
 
     trained_models = event_types.train_models(dtf_e_train, models_to_train)
     event_types.save_models(trained_models)
-    event_types.save_test_dtf(dtf_e_test)
+    event_types.save_test_dtf(dtf_e_test, suffix="default")
