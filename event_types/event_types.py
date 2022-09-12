@@ -766,13 +766,25 @@ def define_regressors():
 
     regressors = dict()
 
-    regressors["random_forest"] = RandomForestRegressor(
-        n_estimators=300, max_depth=5, random_state=0, n_jobs=8
+    regressors["random_forest_300_15"] = RandomForestRegressor(
+        n_estimators=300, max_depth=15, random_state=0, n_jobs=-2
+    )
+    regressors["random_forest_500_15"] = RandomForestRegressor(
+        n_estimators=500, max_depth=15, random_state=0, n_jobs=-2
+    )
+    regressors["random_forest_500_20"] = RandomForestRegressor(
+        n_estimators=500, max_depth=20, random_state=0, n_jobs=-2
+    )
+    regressors["random_forest_300_20"] = RandomForestRegressor(
+        n_estimators=300, max_depth=20, random_state=0, n_jobs=-2
+    )
+    regressors["random_forest_2000_5"] = RandomForestRegressor(
+        n_estimators=2000, max_depth=5, random_state=0, n_jobs=-2
     )
     regressors["MLP_relu"] = make_pipeline(
         preprocessing.QuantileTransformer(output_distribution="normal", random_state=0),
         MLPRegressor(
-            hidden_layer_sizes=(100, 50),
+            hidden_layer_sizes=(72, 36, 6),
             solver="adam",
             max_iter=20000,
             activation="relu",
@@ -784,7 +796,7 @@ def define_regressors():
     regressors["MLP_logistic"] = make_pipeline(
         preprocessing.QuantileTransformer(output_distribution="normal", random_state=0),
         MLPRegressor(
-            hidden_layer_sizes=(80, 45),
+            hidden_layer_sizes=(36, 6),
             solver="adam",
             max_iter=20000,
             activation="logistic",
@@ -796,7 +808,7 @@ def define_regressors():
     regressors["MLP_uniform"] = make_pipeline(
         preprocessing.QuantileTransformer(output_distribution="uniform", random_state=0),
         MLPRegressor(
-            hidden_layer_sizes=(80, 45),
+            hidden_layer_sizes=(36, 6),
             solver="adam",
             max_iter=20000,
             activation="tanh",
@@ -829,13 +841,25 @@ def define_regressors():
             random_state=0,
         ),
     )
+    regressors["MLP_tanh_large"] = make_pipeline(
+        preprocessing.QuantileTransformer(output_distribution="normal", random_state=0),
+        MLPRegressor(
+            hidden_layer_sizes=(72, 12),
+            solver="adam",
+            max_iter=20000,
+            activation="tanh",
+            tol=1e-5,
+            # early_stopping=True,
+            random_state=0,
+        ),
+    )
     regressors["BDT"] = AdaBoostRegressor(
         DecisionTreeRegressor(max_depth=5, random_state=0), n_estimators=50, random_state=0
     )
     regressors["BDT_small"] = AdaBoostRegressor(
         DecisionTreeRegressor(max_depth=30, random_state=0), n_estimators=30, random_state=0
     )
-    regressors["linear_regression"] = LinearRegression(n_jobs=4)
+    regressors["linear_regression"] = LinearRegression(n_jobs=-2)
     regressors["ridge"] = Ridge(alpha=1.0)
     regressors["SVR"] = SVR(C=10.0, epsilon=0.2)
     regressors["linear_SVR"] = make_pipeline(
@@ -869,7 +893,7 @@ def define_classifiers():
     classifiers = dict()
 
     classifiers["random_forest_classifier"] = RandomForestClassifier(
-        n_estimators=100, random_state=0, n_jobs=8
+        n_estimators=100, random_state=0, n_jobs=-2
     )
     classifiers["MLP_classifier"] = make_pipeline(
         preprocessing.QuantileTransformer(output_distribution="normal", random_state=0),
@@ -936,7 +960,7 @@ def define_classifiers():
     classifiers["bagging_dt_classifier"] = BaggingClassifier(
         base_estimator=DecisionTreeClassifier(random_state=0), n_estimators=100, random_state=0
     )
-    classifiers["oneVsRest_classifier"] = OneVsRestClassifier(SVC(), n_jobs=8)
+    classifiers["oneVsRest_classifier"] = OneVsRestClassifier(SVC(), n_jobs=-2)
     classifiers["gradient_boosting_classifier"] = GradientBoostingClassifier(
         n_estimators=100, learning_rate=0.1, max_depth=5, random_state=0
     )
@@ -1762,6 +1786,39 @@ def plot_score_comparison(dtf_e_test, trained_models):
     plt.tight_layout()
 
     return plt, scores
+
+
+def plot_scores(scores):
+    """
+    Plot the score of the model as a function of energy.
+
+    Parameters
+    ----------
+    scores: a nested dict of scores per trained model
+        1st dict:
+            keys=model names, values=2nd dict
+        2nd dict:
+            dict of lists with two entries, "energy" and "scores".
+
+    Returns
+    -------
+    A pyplot instance with the scores plot.
+    """
+
+    setStyle()
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    for this_model_name, these_scores in scores.items():
+        ax.plot(these_scores["energy"], these_scores["scores"], label=this_model_name)
+
+    ax.set_xlabel("E [TeV]")
+    ax.set_ylabel("Score")
+    ax.set_xscale("log")
+    ax.legend()
+    plt.tight_layout()
+
+    return plt
 
 
 def plot_confusion_matrix(event_types, trained_model_name, n_types=2):
