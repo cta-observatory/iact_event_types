@@ -1,4 +1,4 @@
-import argparse
+from copy import deepcopy
 from math import ceil
 from pathlib import Path
 
@@ -8,19 +8,9 @@ from event_types import event_types
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(
-        description=(
-            "An example script how to load trained models."
-            "Remember not to use the data used to train these models."
-            "In future perhaps also the test data will be saved."
-        )
-    )
-
-    args = parser.parse_args()
-
     labels, train_features = event_types.nominal_labels_train_features()
 
-    plot_predict_dist = False
+    plot_predict_dist = True
     plot_scores = True
     plot_confusion_matrix = False
     plot_1d_conf_matrix = False
@@ -31,43 +21,8 @@ if __name__ == "__main__":
     Path("plots").mkdir(parents=True, exist_ok=True)
 
     models_to_compare = [
-        # 'linear_regression',
-        # "random_forest",
-        # "MLP_tanh",
-        # 'MLP_relu',
-        # 'MLP_logistic',
-        # 'MLP_uniform',
-        # 'MLP_lbfgs',
-        # 'BDT',
-        # 'BDT_small',
-        # 'ridge',
-        # 'SVR',
-        # 'linear_SVR',
-        # 'SGD',
-    ]
-    # models_to_compare = [
-    #     'train_size_75p',
-    #     'train_size_50p',
-    #     'train_size_25p',
-    #     'train_size_15p',
-    #     'train_size_5p'
-    # ]
-    # models_to_compare = [
-    #     "all_features",
-    #     "no_reco_diff",
-    # ]
-    models_to_compare = [
-        "random_forest_300_15",
-        "random_forest_300_20",
-        "random_forest_500_15",
-        "random_forest_500_20",
-        "random_forest_2000_5",
-        # "MLP_tanh",
-        # 'MLP_relu',
-        # 'MLP_logistic',
-        # 'MLP_uniform',
-        # 'MLP_lbfgs',  # Do not use, very slow to train
-        # 'MLP_tanh_large',
+        "MLP_tanh",
+        "MLP_tanh_trained_inner_offset_bin",
     ]
 
     if len(models_to_compare) > 1:
@@ -80,6 +35,17 @@ if __name__ == "__main__":
     for i_group, these_models_to_compare in enumerate(group_models_to_compare):
 
         trained_models = event_types.load_models(these_models_to_compare)
+
+        for inner_e_range, all_offsets_e_range in zip(
+            trained_models["MLP_tanh_trained_inner_offset_bin"], trained_models["MLP_tanh"]
+        ):
+            trained_models["MLP_tanh_inner_offset_bin"][inner_e_range] = deepcopy(
+                trained_models["MLP_tanh"][all_offsets_e_range]
+            )
+            trained_models["MLP_tanh_inner_offset_bin"][inner_e_range][
+                "test_data_suffix"
+            ] = "inner_offset_bin"
+
         dataset_names = event_types.extract_unique_dataset_names(trained_models)
         dtf_e_test = event_types.load_multi_test_dtfs(dataset_names)
 

@@ -1,5 +1,4 @@
 import copy
-import os
 from collections import defaultdict
 from pathlib import Path
 
@@ -829,6 +828,18 @@ def define_regressors():
             random_state=0,
         ),
     )
+    regressors["MLP_tanh_trained_inner_offset_bin"] = make_pipeline(
+        preprocessing.QuantileTransformer(output_distribution="normal", random_state=0),
+        MLPRegressor(
+            hidden_layer_sizes=(36, 6),
+            solver="adam",
+            max_iter=20000,
+            activation="tanh",
+            tol=1e-5,
+            # early_stopping=True,
+            random_state=0,
+        ),
+    )
     regressors["MLP_lbfgs"] = make_pipeline(
         preprocessing.QuantileTransformer(output_distribution="normal", random_state=0),
         MLPRegressor(
@@ -1193,7 +1204,7 @@ def load_models(model_names=list()):
     for model_name in model_names:
         print("Loading the {} model".format(model_name))
         models_dir = Path("models").joinpath(model_name)
-        for this_file in sorted(models_dir.iterdir(), key=os.path.getmtime):
+        for this_file in sorted(models_dir.iterdir()):
 
             if this_file.is_file():
 
