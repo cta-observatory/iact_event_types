@@ -115,43 +115,29 @@ if __name__ == "__main__":
 
         if particle is gamma:
             # Divide the Y_diff distributions into a discrete number of event types (n_types)
-            if offset_partition:
-                d_types, event_type_partition = event_types.partition_event_types_offsetwise(
-                    dtf_test,
-                    labels=labels,
-                    log_e_bins=event_type_log_e_bins,
-                    offset_bins=event_type_offset_bins,
-                    n_types=n_types,
-                    return_partition=True,
-                )
-            else:
-                d_types, event_type_partition = event_types.partition_event_types(
-                    dtf_test,
-                    labels=labels,
-                    log_e_bins=event_type_log_e_bins,
-                    n_types=n_types,
-                    return_partition=True,
-                )
+            d_types, event_type_partition = event_types.partition_event_types(
+                dtf_test,
+                labels=labels,
+                log_e_bins=event_type_log_e_bins,
+                offset_bins=event_type_offset_bins,
+                n_types=n_types,
+                return_partition=True,
+                offset_partition=offset_partition,
+            )
+
         else:
             # Calculate event types for proton and electron events, using the same event type
             # thresholds as in the gammas:
-            if offset_partition:
-                d_types = event_types.partition_event_types_offsetwise(
-                    dtf_test,
-                    labels=labels,
-                    log_e_bins=event_type_log_e_bins,
-                    offset_bins=event_type_offset_bins,
-                    n_types=n_types,
-                    event_type_bins=event_type_partition,
-                )
-            else:
-                d_types = event_types.partition_event_types(
-                    dtf_test,
-                    labels=labels,
-                    log_e_bins=event_type_log_e_bins,
-                    n_types=n_types,
-                    event_type_bins=event_type_partition,
-                )
+            d_types = event_types.partition_event_types(
+                dtf_test,
+                labels=labels,
+                log_e_bins=event_type_log_e_bins,
+                offset_bins=event_type_offset_bins,
+                n_types=n_types,
+                event_type_bins=event_type_partition,
+                offset_partition=offset_partition,
+            )
+
         # Start creating the event_type column within the original dataframe,
         # setting the default value: -3.
         # There shouldn't be many -3s at the end. If that's the case, it must be understood.
@@ -182,8 +168,8 @@ if __name__ == "__main__":
         # all three should have similar statistics.
         # Type -1 is assigned to the train sample.
         # Type -2 is the default value when assigning event types to the test sample in
-        # partition_event_types_2. As that function works for each bin of energy and offset,
-        # events outside these bins will have type -2.
+        # partition_event_types_energy and partition_event_types_energy_and_offset. As that function
+        # works for each bin of energy and offset, events outside these bins will have type -2.
         # Type -3 is the default value for the complete tables of each particle.
         # i.e. events with no other type assigned.
 
