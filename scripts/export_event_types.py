@@ -12,10 +12,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # Set offset_partition = True to make an energy and offset-wise event-type partition.
-    # Set offset_partition = False to make an only energy-wise event-type partition.
-    offset_partition = True
-
     gamma = [
         # CTA-N
         "gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0",
@@ -85,8 +81,10 @@ if __name__ == "__main__":
     event_type_log_e_bins = np.arange(-1.7, 2.5, 0.2)
     # Camera offset binning (in degrees) used to separate event types. The binning is a test,
     # should be changed for better performance.
-    event_type_offset_bins = np.arange(0, 7, 1)
+    # event_type_offset_bins = np.arange(0, 5, 1)
     # event_type_offset_bins = np.append(event_type_offset_bins, 10)
+    n_offset_bins = 5
+
     # Number of event types we want to classify our data:
     n_types = 3
     # This variable will store the event type partitioning container.
@@ -106,7 +104,11 @@ if __name__ == "__main__":
             # Using a constant seed of 777, same as in the training/testing events.
             dtf_e_train, dtf_e_test = event_types.split_data_train_test(dtf_e, random_state=777)
         else:
-            dtf_e_test = dtf_e
+            # bin_data_in_energy creates a big offset bin that has to be removed before
+            # add_predict_column. We fix it here.
+            dtf_e_test = dict()
+            for energy_key in dtf_e.keys():
+                dtf_e_test[energy_key] = dtf_e[energy_key][next(iter(dtf_e[energy_key]))]
 
         # To match the format needed by partition_event_types
         dtf_e_test_formatted = {suffix: dtf_e_test}
@@ -114,15 +116,15 @@ if __name__ == "__main__":
         dtf_test = event_types.add_predict_column(dtf_e_test_formatted, trained_model)
 
         if particle is gamma:
+
             # Divide the Y_diff distributions into a discrete number of event types (n_types)
             d_types, event_type_partition = event_types.partition_event_types(
                 dtf_test,
                 labels=labels,
                 log_e_bins=event_type_log_e_bins,
-                offset_bins=event_type_offset_bins,
+                n_offset_bins=n_offset_bins,
                 n_types=n_types,
                 return_partition=True,
-                offset_partition=offset_partition,
             )
 
         else:
@@ -132,10 +134,9 @@ if __name__ == "__main__":
                 dtf_test,
                 labels=labels,
                 log_e_bins=event_type_log_e_bins,
-                offset_bins=event_type_offset_bins,
+                n_offset_bins=n_offset_bins,
                 n_types=n_types,
                 event_type_bins=event_type_partition,
-                offset_partition=offset_partition,
             )
 
         # Start creating the event_type column within the original dataframe,

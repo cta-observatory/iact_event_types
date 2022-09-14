@@ -594,7 +594,7 @@ def bin_data_in_energy(dtf, n_bins=20, log_e_reco_bins=None, return_bins=False):
     offset_bins: array-like. Returned if return_bins=True
     """
 
-    bin_data_in_energy_and_offset(
+    return bin_data_in_energy_and_offset(
         dtf,
         n_e_bins=n_bins,
         n_offset_bins=1,
@@ -670,10 +670,10 @@ def bin_data_in_energy_and_offset(
     dtf_e_offset = dict()
 
     if offset_bins is None:
-        # Bins of one degree.
-        offset_bins = np.arange(0, n_offset_bins, 1)
-        # The last bin covers the rest of the camera-offset range.
-        offset_bins = np.append(offset_bins, max(dtf['camera_offset']))
+        # n_offset_bins -1 from 0 to 4 deg.
+        offset_bins = np.linspace(0, 4, n_offset_bins)
+        # The last bin covers the rest of the camera-offset range. Up to 11 deg.
+        offset_bins = np.append(offset_bins, 11)
 
     if log_e_reco_bins is None:
         log_e_reco_bins = mstats.mquantiles(
@@ -1361,6 +1361,7 @@ def partition_event_types(
         labels,
         log_e_bins,
         offset_bins=None,
+        n_offset_bins=1,
         n_types=3,
         type_bins="equal statistics",
         return_partition=False,
@@ -1386,6 +1387,8 @@ def partition_event_types(
         The bins are assumed to be the log values of the energy in TeV.
     offset_bins: array-like, default=None
         A list of camera-offset bins (in degrees) in which to divide the data into types.
+    n_offset_bins: int (default=1)
+        The number of reconstructed camera-offset bins to divide the data in.
     n_types: int (default=3)
         The number of types to divide the data in.
     type_bins: list of floats or str
@@ -1448,7 +1451,9 @@ def partition_event_types(
         print("Calculating event types for the {} model".format(model_name))
 
         dtf_binned_test = bin_data_in_energy_and_offset(
-            this_dtf, log_e_reco_bins=log_e_bins, offset_bins=offset_bins
+            this_dtf, log_e_reco_bins=log_e_bins,
+            offset_bins=offset_bins,
+            n_offset_bins=n_offset_bins,
         )
 
         for this_e_range in dtf_binned_test.keys():
