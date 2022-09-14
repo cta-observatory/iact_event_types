@@ -1505,6 +1505,7 @@ def partition_event_types(
                     dtf_binned_test[energy_key][offset_key].index.values, "event_type"
                 ] = event_types[model_name][energy_key][offset_key]["reco"]
 
+
     if return_partition:
         return event_types, event_type_bins
     else:
