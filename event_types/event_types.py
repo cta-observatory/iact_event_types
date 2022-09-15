@@ -810,8 +810,11 @@ def split_data_train_test(dtf_e, test_size=0.75, random_state=777):
 
     dtf_e_train = dict()
     dtf_e_test = dict()
-
+    
     for this_e_range in dtf_e.keys():
+        # dtf_e has one big offset bin including all the events, but this function saves the train
+        # and test samples with only energy bins, because the offset bin is not necessary for the
+        # training nor the testing (adding the prediction column)
         for this_offset_range, this_dtf in dtf_e[this_e_range].items():
             dtf_e_train[this_e_range], dtf_e_test[this_e_range] = model_selection.train_test_split(
                 this_dtf, test_size=test_size, random_state=random_state
