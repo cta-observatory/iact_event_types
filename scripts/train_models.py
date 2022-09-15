@@ -5,7 +5,7 @@ from event_types import event_types
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
-        description=("Train event classes models." "Results are saved in the models directory.")
+        description="Train event classes models. Results are saved in the models directory."
     )
 
     args = parser.parse_args()

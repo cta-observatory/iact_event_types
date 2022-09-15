@@ -127,3 +127,12 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Pycharm temp files
+.idea/*
+
+# Folders with data
+reduced_data/
+plots/
+scores/
+models/
