@@ -567,7 +567,8 @@ def load_dtf(suffix=""):
 
 def bin_data_in_energy(dtf, n_bins=20, log_e_reco_bins=None, return_bins=False):
     """
-    Bin the data in dtf into log energy bins.
+    Bin the data in dtf into n_bins for energy with equal statistics and only one
+    offset range covering all the data.
 
     Parameters
     ----------
