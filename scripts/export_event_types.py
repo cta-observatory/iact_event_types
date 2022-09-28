@@ -30,7 +30,8 @@ if __name__ == "__main__":
     ]
     electron = [
         # CTA-N
-        "electron_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0",
+        # "electron_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0",
+        "electron.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0",
         "electron.N.D25-4LSTs09MSTs-MSTN_ID0.eff-1",
         "electron.N.D25-4LSTs09MSTs-MSTN_ID0.eff-2",
         "electron.N.D25-4LSTs09MSTs-MSTN_ID0.eff-3",
@@ -38,6 +39,7 @@ if __name__ == "__main__":
         "electron.N.D25-4LSTs09MSTs-MSTN_ID0.eff-5",
         # CTA-S
         # 'electron_onSource.S-LM6C5ax-4LSTs14MSTs40SSTs-MSTF_ID0.eff-0',
+        # 'electron.S-LM6C5ax-4LSTs14MSTs40SSTs-MSTF_ID0.eff-0',
         # 'electron.S-LM6C5ax-4LSTs14MSTs40SSTs-MSTF_ID0.eff-1',
         # 'electron.S-LM6C5ax-4LSTs14MSTs40SSTs-MSTF_ID0.eff-2',
         # 'electron.S-LM6C5ax-4LSTs14MSTs40SSTs-MSTF_ID0.eff-3',
@@ -46,7 +48,8 @@ if __name__ == "__main__":
     ]
     proton = [
         # CTA-N
-        "proton_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0",
+        # "proton_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0",
+        "proton.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0",
         "proton.N.D25-4LSTs09MSTs-MSTN_ID0.eff-1",
         "proton.N.D25-4LSTs09MSTs-MSTN_ID0.eff-2",
         "proton.N.D25-4LSTs09MSTs-MSTN_ID0.eff-3",
@@ -54,6 +57,7 @@ if __name__ == "__main__":
         "proton.N.D25-4LSTs09MSTs-MSTN_ID0.eff-5",
         # CTA-S
         # 'proton_onSource.S-LM6C5ax-4LSTs14MSTs40SSTs-MSTF_ID0.eff-0',
+        # 'proton.S-LM6C5ax-4LSTs14MSTs40SSTs-MSTF_ID0.eff-0',
         # 'proton.S-LM6C5ax-4LSTs14MSTs40SSTs-MSTF_ID0.eff-1',
         # 'proton.S-LM6C5ax-4LSTs14MSTs40SSTs-MSTF_ID0.eff-2',
         # 'proton.S-LM6C5ax-4LSTs14MSTs40SSTs-MSTF_ID0.eff-3',
