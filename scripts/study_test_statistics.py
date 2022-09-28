@@ -24,7 +24,9 @@ if __name__ == "__main__":
         )
         dtf = event_types.extract_df_from_dl2(dl2_file_name)
     else:
-        dtf = event_types.load_dtf("gamma_cone.S-M6C5-14MSTs40SSTs-MSTF_ID0.eff-0")
+        dtf = event_types.load_dtf(
+            [f"gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-{i}" for i in range(6)]
+        )
 
     dtf = dtf.dropna()
 
@@ -35,11 +37,11 @@ if __name__ == "__main__":
     all_models = event_types.define_regressors()
 
     test_data_frac = dict()
-    test_data_frac["train_size_75p"] = 0.25
-    test_data_frac["train_size_50p"] = 0.50
+    test_data_frac["train_size_45p"] = 0.55
+    test_data_frac["train_size_35p"] = 0.65
     test_data_frac["train_size_25p"] = 0.75
     test_data_frac["train_size_15p"] = 0.85
-    test_data_frac["train_size_5p"] = 0.95
+    # test_data_frac["train_size_5p"] = 0.95
 
     for test_frac_name, test_frac in test_data_frac.items():
         print("Training with {:.0%}".format(test_frac))
@@ -47,7 +49,7 @@ if __name__ == "__main__":
         models_to_train[test_frac_name] = dict()
         models_to_train[test_frac_name]["train_features"] = train_features
         models_to_train[test_frac_name]["labels"] = labels
-        models_to_train[test_frac_name]["model"] = all_models["linear_regression"]
+        models_to_train[test_frac_name]["model"] = all_models["MLP_tanh"]
         models_to_train[test_frac_name]["test_data_suffix"] = test_frac_name
 
         dtf_e_train, dtf_e_test = event_types.split_data_train_test(
