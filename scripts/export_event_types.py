@@ -169,8 +169,8 @@ if __name__ == "__main__":
         # all three should have similar statistics.
         # Type -1 is assigned to the train sample.
         # Type -2 is the default value when assigning event types to the test sample in
-        # partition_event_types_energy and partition_event_types_energy_and_offset. As that function
-        # works for each bin of energy and offset, events outside these bins will have type -2.
+        # partition_event_types. As that function works for each bin of energy and offset,
+        # events outside these bins will have type -2.
         # Type -3 is the default value for the complete tables of each particle.
         # i.e. events with no other type assigned.
 
