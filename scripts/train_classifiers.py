@@ -13,17 +13,19 @@ if __name__ == "__main__":
     n_types = 3
 
     start_from_DL2 = False
+    bins_off_axis_angle = [0, 1, 2, 3, 4, 5]
+    layout_desc = "N.D25-4LSTs09MSTs-MSTN"  # LaPalma
+    # layout_desc = 'S-M6C8aj-14MSTs37SSTs-MSTF'  # Paranal
     if start_from_DL2:
-        # Prod5
-        dl2_file_name = (
-            "/lustre/fs22/group/cta/users/maierg/analysis/AnalysisData/"
-            "prod5-Paranal-20deg-sq08-LL/EffectiveAreas/"
-            "EffectiveArea-50h-ID0-NIM2LST2MST2SST2SCMST2-g20210921-V3/BDT.DL2.50h-V3.g20210921/"
-            "gamma_onSource.S.BL-4LSTs25MSTs70SSTs-MSTF_ID0.eff-0.root"
-        )
-        dtf = event_types.extract_df_from_dl2(dl2_file_name)
+        dl2_file_names = [
+            "../../data/LongFiles/North/"
+            f"gamma_cone.{layout_desc}_ID0.eff-{i}.root" for i in bins_off_axis_angle
+        ]
+        dtf = event_types.extract_df_from_multiple_dl2(dl2_file_names)
     else:
-        dtf = event_types.load_dtf()
+        dtf = event_types.load_dtf(
+            [f"gamma_cone.{layout_desc}_ID0.eff-{i}" for i in bins_off_axis_angle]
+        )
 
     dtf_e = event_types.bin_data_in_energy(dtf)
 

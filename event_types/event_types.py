@@ -311,7 +311,6 @@ def extract_df_from_dl2(root_filename):
     ----------
     root_filename: str or Path
         The location of the DL2 root file name from which to extract the DF.
-        TODO: Allow using several DL2 files (in a higher level function?)
 
     Returns
     -------
@@ -489,6 +488,30 @@ def extract_df_from_dl2(root_filename):
         data_dict["std_tgrad_x"].extend(tuple(std_tgrad_x))
 
     return pd.DataFrame(data=data_dict)
+
+
+def extract_df_from_multiple_dl2(root_filenames):
+    """
+    Extract a Pandas DataFrame from more than one ROOT DL2 file.
+    Selects all events surviving gamma/hadron cuts from the DL2 file.
+
+    Parameters
+    ----------
+    root_filenames: list of str or Path
+        The location of the DL2 root files from which to extract the DF.
+
+    Returns
+    -------
+    A pandas DataFrame with variables to use in the regression/classification, after cuts.
+    """
+
+    dtf = pd.DataFrame()
+
+    for root_filename in root_filenames:
+        print("Extracting from {}".format(root_filename))
+        dtf = dtf.append(extract_df_from_dl2(root_filename))
+
+    return dtf
 
 
 def save_dtf(dtf, suffix=""):
@@ -809,7 +832,7 @@ def split_data_train_test(dtf_e, test_size=0.75, random_state=777):
 
     dtf_e_train = dict()
     dtf_e_test = dict()
-    
+
     for this_e_range in dtf_e.keys():
         # dtf_e has one big offset bin including all the events, but this function saves the train
         # and test samples with only energy bins, because the offset bin is not necessary for the
@@ -1543,7 +1566,6 @@ def partition_event_types(
                 this_dtf.loc[
                     dtf_binned_test[energy_key][offset_key].index.values, "event_type"
                 ] = event_types[model_name][energy_key][offset_key]["reco"]
-
 
     if return_partition:
         return event_types, event_type_bins

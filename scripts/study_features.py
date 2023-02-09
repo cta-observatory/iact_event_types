@@ -45,7 +45,20 @@ if __name__ == "__main__":
         models_to_train[features_name]["model"] = all_models["MLP_tanh"]
         models_to_train[features_name]["test_data_suffix"] = "default"
 
-    dtf = event_types.load_dtf([f"gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-{i}" for i in range(6)])
+    start_from_DL2 = False
+    bins_off_axis_angle = [0, 1, 2, 3, 4, 5]
+    layout_desc = "N.D25-4LSTs09MSTs-MSTN"  # LaPalma
+    # layout_desc = 'S-M6C8aj-14MSTs37SSTs-MSTF'  # Paranal
+    if start_from_DL2:
+        dl2_file_names = [
+            "../../data/LongFiles/North/"
+            f"gamma_cone.{layout_desc}_ID0.eff-{i}.root" for i in bins_off_axis_angle
+        ]
+        dtf = event_types.extract_df_from_multiple_dl2(dl2_file_names)
+    else:
+        dtf = event_types.load_dtf(
+            [f"gamma_cone.{layout_desc}_ID0.eff-{i}" for i in bins_off_axis_angle]
+        )
 
     dtf = dtf.dropna()
 
