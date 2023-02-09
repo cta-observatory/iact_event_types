@@ -15,18 +15,14 @@ if __name__ == "__main__":
 
     dl2_file_path = (
         # Paranal
-        # '/lustre/fs22/group/cta/users/maierg/analysis/AnalysisData/'
-        # 'prod5-Paranal-20deg-sq10-LL-DL2plus/EffectiveAreas/'
-        # 'EffectiveArea-50h-ID0-NIM2LST2MST2SST2SCMST2-g20210610-V3/BDT.50h-V3.g20210610/'
+        # "../../data/LongFiles/South/"
         # La Palma
-        "/lustre/fs22/group/cta/users/maierg/analysis/AnalysisData/"
-        "prod5b-LaPalma-20deg-sq10-LL-DL2plus/EffectiveAreas/"
-        "EffectiveArea-50h-ID0-NIM2LST2MST2SST2SCMST2-g20210610-V3/BDT.50h-V3.g20210610/"
+        "../../data/LongFiles/North/"
     )
     particles = ["gamma_onSource", "gamma_cone", "electron", "proton"]
-    bins_off_axis_angle = [1, 2, 3, 4, 5]
+    bins_off_axis_angle = [0, 1, 2, 3, 4, 5]
     layout_desc = "N.D25-4LSTs09MSTs-MSTN"  # LaPalma
-    # layout_desc = 'S-LM6C5ax-4LSTs14MSTs40SSTs-MSTF'  # Paranal
+    # layout_desc = 'S-M6C8aj-14MSTs37SSTs-MSTF'  # Paranal
 
     dl2_file_list = list()
     for particle in particles:
