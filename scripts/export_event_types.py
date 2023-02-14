@@ -7,7 +7,7 @@ from event_types import event_types
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
-        description="Train event classes models." "Results are saved in the models directory."
+        description="Obtain the event types for all the events in the DL2 files."
     )
 
     args = parser.parse_args()
@@ -28,9 +28,8 @@ if __name__ == "__main__":
     particles = [gamma, electron, proton]
 
     labels, train_features = event_types.nominal_labels_train_features()
-
+    # Select the model we want to use to classify the events.
     selected_model = "MLP_tanh"
-
     trained_model = event_types.load_models([selected_model])
     # Get the energy binning from the trained model
     e_ranges = list(trained_model[next(iter(trained_model))].keys())
@@ -45,9 +44,7 @@ if __name__ == "__main__":
     event_type_log_e_bins = np.arange(-1.7, 2.5, 0.2)
     # Camera offset binning (in degrees) used to separate event types. The binning is a test,
     # should be changed for better performance.
-    # event_type_offset_bins = np.arange(0, 5, 1)
-    # event_type_offset_bins = np.append(event_type_offset_bins, 10)
-    n_offset_bins = 5
+    n_offset_bins = 6
 
     # Number of event types we want to classify our data:
     n_types = 3
@@ -93,6 +90,10 @@ if __name__ == "__main__":
                 n_types=n_types,
                 return_partition=True,
             )
+
+            import pickle
+            with open('event_type_partition.pkl', 'wb') as f:
+                pickle.dump(event_type_partition, f)
 
         else:
             # Calculate event types for proton and electron events, using the same event type
