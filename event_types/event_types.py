@@ -201,16 +201,16 @@ def branches_to_read():
         "MCxoff",
         "MCyoff",
         "size",
-        "ErecS",
+        "erec",
         "NImages",
         "Xcore",
         "Ycore",
-        "Xoff",
-        "Yoff",
+        "xoff",
+        "yoff",
         "Xoff_intersect",
         "Yoff_intersect",
         "img2_ang",
-        "EChi2S",
+        # "EChi2S",
         "SizeSecondMax",
         "NTelPairs",
         "MSCW",
@@ -256,7 +256,7 @@ def nominal_labels_train_features():
         "log_SizeSecondMax",
         "MSCW",
         "MSCL",
-        "log_EChi2S",
+        # "log_EChi2S",
         "log_EmissionHeight",
         "log_EmissionHeightChi2",
         "log_DispDiff",
@@ -338,7 +338,7 @@ def extract_df_from_dl2(root_filename):
 
     for i_event, data_arrays in enumerate(
             uproot.iterate(
-                "{}:data".format(root_filename), step_size=step_size, expressions=branches, library="np"
+                "{}:DL2EventTree".format(root_filename), step_size=step_size, expressions=branches, library="np"
             )
     ):
 
@@ -351,8 +351,8 @@ def extract_df_from_dl2(root_filename):
         cut_class = cut_class[gamma_like_events]
 
         # Label to train with:
-        x_off = data_arrays["Xoff"][gamma_like_events]
-        y_off = data_arrays["Yoff"][gamma_like_events]
+        x_off = data_arrays["xoff"][gamma_like_events]
+        y_off = data_arrays["yoff"][gamma_like_events]
         x_off_mc = data_arrays["MCxoff"][gamma_like_events]
         y_off_mc = data_arrays["MCyoff"][gamma_like_events]
         ang_diff = np.sqrt((x_off - x_off_mc) ** 2.0 + (y_off - y_off_mc) ** 2.0)
@@ -360,7 +360,7 @@ def extract_df_from_dl2(root_filename):
         # Variables for training:
         runNumber = data_arrays["runNumber"][gamma_like_events]
         eventNumber = data_arrays["eventNumber"][gamma_like_events]
-        reco_energy = data_arrays["ErecS"][gamma_like_events]
+        reco_energy = data_arrays["erec"][gamma_like_events]
         true_energy = data_arrays["MCe0"][gamma_like_events]
         camera_offset = np.sqrt(x_off ** 2.0 + y_off ** 2.0)
         NTels_reco = data_arrays["NImages"][gamma_like_events]
@@ -368,7 +368,7 @@ def extract_df_from_dl2(root_filename):
         y_cores = data_arrays["Ycore"][gamma_like_events]
         array_distance = np.sqrt(x_cores ** 2.0 + y_cores ** 2.0)
         img2_ang = data_arrays["img2_ang"][gamma_like_events]
-        EChi2S = data_arrays["EChi2S"][gamma_like_events]
+        # EChi2S = data_arrays["EChi2S"][gamma_like_events]
         SizeSecondMax = data_arrays["SizeSecondMax"][gamma_like_events]
         NTelPairs = data_arrays["NTelPairs"][gamma_like_events]
         MSCW = data_arrays["MSCW"][gamma_like_events]
@@ -436,7 +436,7 @@ def extract_df_from_dl2(root_filename):
         data_dict["log_NTels_reco"].extend(tuple(np.log10(NTels_reco)))
         data_dict["array_distance"].extend(tuple(array_distance))
         data_dict["img2_ang"].extend(tuple(img2_ang))
-        data_dict["log_EChi2S"].extend(tuple(np.log10(EChi2S)))
+        # data_dict["log_EChi2S"].extend(tuple(np.log10(EChi2S)))
         data_dict["log_SizeSecondMax"].extend(tuple(np.log10(SizeSecondMax)))
         data_dict["log_NTelPairs"].extend(tuple(np.log10(NTelPairs)))
         data_dict["MSCW"].extend(tuple(MSCW))
