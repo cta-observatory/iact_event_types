@@ -487,6 +487,10 @@ def extract_df_from_dl2(root_filename):
         data_dict["me_tgrad_x"].extend(tuple(me_tgrad_x))
         data_dict["std_tgrad_x"].extend(tuple(std_tgrad_x))
 
+        # remove events with NaNs or Infs in any of the variables
+        for key in data_dict.keys():
+            data_dict[key] = [x for x in data_dict[key] if not np.isnan(x) and not np.isinf(x)]
+
     return pd.DataFrame(data=data_dict)
 
 
