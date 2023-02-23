@@ -202,7 +202,7 @@ def branches_to_read():
         "MCyoff",
         "size",
         "erec",
-        "NImages",
+        "nimages",
         "Xcore",
         "Ycore",
         "xoff",
@@ -363,7 +363,7 @@ def extract_df_from_dl2(root_filename):
         reco_energy = data_arrays["erec"][gamma_like_events]
         true_energy = data_arrays["MCe0"][gamma_like_events]
         camera_offset = np.sqrt(x_off ** 2.0 + y_off ** 2.0)
-        NTels_reco = data_arrays["NImages"][gamma_like_events]
+        NTels_reco = data_arrays["nimages"][gamma_like_events]
         x_cores = data_arrays["Xcore"][gamma_like_events]
         y_cores = data_arrays["Ycore"][gamma_like_events]
         array_distance = np.sqrt(x_cores ** 2.0 + y_cores ** 2.0)
@@ -487,9 +487,9 @@ def extract_df_from_dl2(root_filename):
         data_dict["me_tgrad_x"].extend(tuple(me_tgrad_x))
         data_dict["std_tgrad_x"].extend(tuple(std_tgrad_x))
 
-        # remove events with NaNs or Infs in any of the variables
+        # remove NaNs or Infs in any of the variables
         for key in data_dict.keys():
-            data_dict[key] = [x for x in data_dict[key] if not np.isnan(x) and not np.isinf(x)]
+            data_dict[key][~np.isfinite(data_dict[key])] = 0
 
     return pd.DataFrame(data=data_dict)
 
