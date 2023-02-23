@@ -1,3 +1,5 @@
+import warnings
+
 import copy
 from collections import defaultdict
 from pathlib import Path
@@ -487,9 +489,14 @@ def extract_df_from_dl2(root_filename):
         data_dict["me_tgrad_x"].extend(tuple(me_tgrad_x))
         data_dict["std_tgrad_x"].extend(tuple(std_tgrad_x))
 
-        # remove NaNs or Infs in any of the variables
+        # change NaNs or Infs in any of the variables to 0 and count them
+        nan_count = 0
         for key in data_dict.keys():
-            data_dict[key][~np.isfinite(data_dict[key])] = 0
+            for i, value in enumerate(data_dict[key]):
+                if np.isnan(value) or np.isinf(value):
+                    data_dict[key][i] = 0
+                    nan_count += 1
+        warnings.warn("There were {} NaNs or Infs in the data (they were changed to 0)".format(nan_count))
 
     return pd.DataFrame(data=data_dict)
 
