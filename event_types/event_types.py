@@ -491,11 +491,15 @@ def extract_df_from_dl2(root_filename):
 
         # change NaNs or Infs in any of the variables to 0 and count them
         nan_count = 0
-        for key in data_dict.keys():
-            for i, value in enumerate(data_dict[key]):
-                if np.isnan(value) or np.isinf(value):
-                    data_dict[key][i] = 0
-                    nan_count += 1
+        for key, values in data_dict.items():
+            values = np.array(values)
+            # Create a boolean mask of the NaN or Inf values in values
+            mask = np.logical_or(np.isnan(values), np.isinf(values))
+            # Set the NaN or Inf values to 0 using the mask
+            values[mask] = 0
+            data_dict[key] = values.tolist()
+            # Count the number of NaN or Inf values
+            nan_count += np.count_nonzero(mask)
         warnings.warn("There were {} NaNs or Infs in the data (they were changed to 0)".format(nan_count))
 
     return pd.DataFrame(data=data_dict)
@@ -587,11 +591,10 @@ def load_dtf(suffix=""):
     if not isinstance(suffix, list):
         suffix = [suffix]
 
-    n_files = len(suffix)
-    all_dtfs = [None] * n_files
+    all_dtfs = [None] * len(suffix)
 
-    for i_file in range(n_files):
-        all_dtfs[i_file] = load_one_dtf(suffix[i_file])
+    for i, file in enumerate(suffix):
+        all_dtfs[i] = load_one_dtf(file)
 
     dtf_merged = pd.concat(all_dtfs, ignore_index=True)
 
@@ -730,7 +733,7 @@ def bin_data_in_energy_and_offset(
             10 ** log_e_reco_bins[i_e_bin - 1], 10 ** log_e_high
         )
         if len(this_dtf_e) < 1:
-            raise RuntimeError("The range {} is empty".format(this_e_range))
+            warnings.warn("The range {} is empty".format(this_e_range))
 
         dtf_e_offset[this_e_range] = dict()
 
@@ -748,9 +751,7 @@ def bin_data_in_energy_and_offset(
                 offset_bins[i_offset_bin - 1], offset_high
             )
             if len(this_dtf_e_offset) < 1:
-                raise RuntimeError(
-                    "The range {}, {} is empty".format(this_e_range, this_offset_range)
-                )
+                warnings.warn("The range {}, {} is empty".format(this_e_range, this_offset_range))
 
             dtf_e_offset[this_e_range][this_offset_range] = this_dtf_e_offset
 
