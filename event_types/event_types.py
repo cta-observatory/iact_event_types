@@ -489,18 +489,18 @@ def extract_df_from_dl2(root_filename):
         data_dict["me_tgrad_x"].extend(tuple(me_tgrad_x))
         data_dict["std_tgrad_x"].extend(tuple(std_tgrad_x))
 
-        # change NaNs or Infs in any of the variables to 0 and count them
-        nan_count = 0
-        for key, values in data_dict.items():
-            values = np.array(values)
-            # Create a boolean mask of the NaN or Inf values in values
-            mask = np.logical_or(np.isnan(values), np.isinf(values))
-            # Set the NaN or Inf values to 0 using the mask
-            values[mask] = 0
-            data_dict[key] = values.tolist()
-            # Count the number of NaN or Inf values
-            nan_count += np.count_nonzero(mask)
-        warnings.warn("There were {} NaNs or Infs in the data (they were changed to 0)".format(nan_count))
+    # change NaNs or Infs in any of the variables to 0 and count them
+    nan_count = 0
+    for key, values in data_dict.items():
+        values = np.array(values)
+        # Create a boolean mask of the NaN or Inf values in values
+        mask = np.logical_or(np.isnan(values), np.isinf(values))
+        # Set the NaN or Inf values to 0 using the mask
+        values[mask] = 0
+        data_dict[key] = values.tolist()
+        # Count the number of NaN or Inf values
+        nan_count += np.count_nonzero(mask)
+    warnings.warn("There were {} NaNs or Infs in the data (they were changed to 0)".format(nan_count))
 
     return pd.DataFrame(data=data_dict)
 

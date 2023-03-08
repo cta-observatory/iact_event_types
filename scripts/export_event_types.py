@@ -91,10 +91,6 @@ if __name__ == "__main__":
                 return_partition=True,
             )
 
-            import pickle
-            with open('event_type_partition.pkl', 'wb') as f:
-                pickle.dump(event_type_partition, f)
-
         else:
             # Calculate event types for proton and electron events, using the same event type
             # thresholds as in the gammas:
