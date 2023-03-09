@@ -1,3 +1,5 @@
+import warnings
+
 import copy
 from collections import defaultdict
 from pathlib import Path
@@ -201,16 +203,16 @@ def branches_to_read():
         "MCxoff",
         "MCyoff",
         "size",
-        "ErecS",
-        "NImages",
+        "erec",
+        "nimages",
         "Xcore",
         "Ycore",
-        "Xoff",
-        "Yoff",
+        "xoff",
+        "yoff",
         "Xoff_intersect",
         "Yoff_intersect",
         "img2_ang",
-        "EChi2S",
+        # "EChi2S",
         "SizeSecondMax",
         "NTelPairs",
         "MSCW",
@@ -256,7 +258,7 @@ def nominal_labels_train_features():
         "log_SizeSecondMax",
         "MSCW",
         "MSCL",
-        "log_EChi2S",
+        # "log_EChi2S",
         "log_EmissionHeight",
         "log_EmissionHeightChi2",
         "log_DispDiff",
@@ -311,7 +313,6 @@ def extract_df_from_dl2(root_filename):
     ----------
     root_filename: str or Path
         The location of the DL2 root file name from which to extract the DF.
-        TODO: Allow using several DL2 files (in a higher level function?)
 
     Returns
     -------
@@ -339,7 +340,7 @@ def extract_df_from_dl2(root_filename):
 
     for i_event, data_arrays in enumerate(
             uproot.iterate(
-                "{}:data".format(root_filename), step_size=step_size, expressions=branches, library="np"
+                "{}:DL2EventTree".format(root_filename), step_size=step_size, expressions=branches, library="np"
             )
     ):
 
@@ -352,8 +353,8 @@ def extract_df_from_dl2(root_filename):
         cut_class = cut_class[gamma_like_events]
 
         # Label to train with:
-        x_off = data_arrays["Xoff"][gamma_like_events]
-        y_off = data_arrays["Yoff"][gamma_like_events]
+        x_off = data_arrays["xoff"][gamma_like_events]
+        y_off = data_arrays["yoff"][gamma_like_events]
         x_off_mc = data_arrays["MCxoff"][gamma_like_events]
         y_off_mc = data_arrays["MCyoff"][gamma_like_events]
         ang_diff = np.sqrt((x_off - x_off_mc) ** 2.0 + (y_off - y_off_mc) ** 2.0)
@@ -361,15 +362,15 @@ def extract_df_from_dl2(root_filename):
         # Variables for training:
         runNumber = data_arrays["runNumber"][gamma_like_events]
         eventNumber = data_arrays["eventNumber"][gamma_like_events]
-        reco_energy = data_arrays["ErecS"][gamma_like_events]
+        reco_energy = data_arrays["erec"][gamma_like_events]
         true_energy = data_arrays["MCe0"][gamma_like_events]
         camera_offset = np.sqrt(x_off ** 2.0 + y_off ** 2.0)
-        NTels_reco = data_arrays["NImages"][gamma_like_events]
+        NTels_reco = data_arrays["nimages"][gamma_like_events]
         x_cores = data_arrays["Xcore"][gamma_like_events]
         y_cores = data_arrays["Ycore"][gamma_like_events]
         array_distance = np.sqrt(x_cores ** 2.0 + y_cores ** 2.0)
         img2_ang = data_arrays["img2_ang"][gamma_like_events]
-        EChi2S = data_arrays["EChi2S"][gamma_like_events]
+        # EChi2S = data_arrays["EChi2S"][gamma_like_events]
         SizeSecondMax = data_arrays["SizeSecondMax"][gamma_like_events]
         NTelPairs = data_arrays["NTelPairs"][gamma_like_events]
         MSCW = data_arrays["MSCW"][gamma_like_events]
@@ -437,7 +438,7 @@ def extract_df_from_dl2(root_filename):
         data_dict["log_NTels_reco"].extend(tuple(np.log10(NTels_reco)))
         data_dict["array_distance"].extend(tuple(array_distance))
         data_dict["img2_ang"].extend(tuple(img2_ang))
-        data_dict["log_EChi2S"].extend(tuple(np.log10(EChi2S)))
+        # data_dict["log_EChi2S"].extend(tuple(np.log10(EChi2S)))
         data_dict["log_SizeSecondMax"].extend(tuple(np.log10(SizeSecondMax)))
         data_dict["log_NTelPairs"].extend(tuple(np.log10(NTelPairs)))
         data_dict["MSCW"].extend(tuple(MSCW))
@@ -488,7 +489,44 @@ def extract_df_from_dl2(root_filename):
         data_dict["me_tgrad_x"].extend(tuple(me_tgrad_x))
         data_dict["std_tgrad_x"].extend(tuple(std_tgrad_x))
 
+    # change NaNs or Infs in any of the variables to 0 and count them
+    nan_count = 0
+    for key, values in data_dict.items():
+        values = np.array(values)
+        # Create a boolean mask of the NaN or Inf values in values
+        mask = np.logical_or(np.isnan(values), np.isinf(values))
+        # Set the NaN or Inf values to 0 using the mask
+        values[mask] = 0
+        data_dict[key] = values.tolist()
+        # Count the number of NaN or Inf values
+        nan_count += np.count_nonzero(mask)
+    warnings.warn("There were {} NaNs or Infs in the data (they were changed to 0)".format(nan_count))
+
     return pd.DataFrame(data=data_dict)
+
+
+def extract_df_from_multiple_dl2(root_filenames):
+    """
+    Extract a Pandas DataFrame from more than one ROOT DL2 file.
+    Selects all events surviving gamma/hadron cuts from the DL2 file.
+
+    Parameters
+    ----------
+    root_filenames: list of str or Path
+        The location of the DL2 root files from which to extract the DF.
+
+    Returns
+    -------
+    A pandas DataFrame with variables to use in the regression/classification, after cuts.
+    """
+
+    dtf = pd.DataFrame()
+
+    for root_filename in root_filenames:
+        print("Extracting from {}".format(root_filename))
+        dtf = dtf.append(extract_df_from_dl2(root_filename))
+
+    return dtf
 
 
 def save_dtf(dtf, suffix=""):
@@ -553,11 +591,10 @@ def load_dtf(suffix=""):
     if not isinstance(suffix, list):
         suffix = [suffix]
 
-    n_files = len(suffix)
-    all_dtfs = [None] * n_files
+    all_dtfs = [None] * len(suffix)
 
-    for i_file in range(n_files):
-        all_dtfs[i_file] = load_one_dtf(suffix[i_file])
+    for i, file in enumerate(suffix):
+        all_dtfs[i] = load_one_dtf(file)
 
     dtf_merged = pd.concat(all_dtfs, ignore_index=True)
 
@@ -696,7 +733,7 @@ def bin_data_in_energy_and_offset(
             10 ** log_e_reco_bins[i_e_bin - 1], 10 ** log_e_high
         )
         if len(this_dtf_e) < 1:
-            raise RuntimeError("The range {} is empty".format(this_e_range))
+            warnings.warn("The range {} is empty".format(this_e_range))
 
         dtf_e_offset[this_e_range] = dict()
 
@@ -714,9 +751,7 @@ def bin_data_in_energy_and_offset(
                 offset_bins[i_offset_bin - 1], offset_high
             )
             if len(this_dtf_e_offset) < 1:
-                raise RuntimeError(
-                    "The range {}, {} is empty".format(this_e_range, this_offset_range)
-                )
+                warnings.warn("The range {}, {} is empty".format(this_e_range, this_offset_range))
 
             dtf_e_offset[this_e_range][this_offset_range] = this_dtf_e_offset
 
@@ -809,7 +844,7 @@ def split_data_train_test(dtf_e, test_size=0.75, random_state=777):
 
     dtf_e_train = dict()
     dtf_e_test = dict()
-    
+
     for this_e_range in dtf_e.keys():
         # dtf_e has one big offset bin including all the events, but this function saves the train
         # and test samples with only energy bins, because the offset bin is not necessary for the
@@ -1543,7 +1578,6 @@ def partition_event_types(
                 this_dtf.loc[
                     dtf_binned_test[energy_key][offset_key].index.values, "event_type"
                 ] = event_types[model_name][energy_key][offset_key]["reco"]
-
 
     if return_partition:
         return event_types, event_type_bins

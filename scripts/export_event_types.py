@@ -7,66 +7,29 @@ from event_types import event_types
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
-        description="Train event classes models." "Results are saved in the models directory."
+        description="Obtain the event types for all the events in the DL2 files."
     )
 
     args = parser.parse_args()
 
-    gamma = [
-        # CTA-N
-        "gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0",
-        "gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-1",
-        "gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-2",
-        "gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-3",
-        "gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-4",
-        "gamma_cone.N.D25-4LSTs09MSTs-MSTN_ID0.eff-5",
-        # CTA-S
-        # 'gamma_cone.S-LM6C5ax-4LSTs14MSTs40SSTs-MSTF_ID0.eff-0',
-        # 'gamma_cone.S-LM6C5ax-4LSTs14MSTs40SSTs-MSTF_ID0.eff-1',
-        # 'gamma_cone.S-LM6C5ax-4LSTs14MSTs40SSTs-MSTF_ID0.eff-2',
-        # 'gamma_cone.S-LM6C5ax-4LSTs14MSTs40SSTs-MSTF_ID0.eff-3',
-        # 'gamma_cone.S-LM6C5ax-4LSTs14MSTs40SSTs-MSTF_ID0.eff-4',
-        # 'gamma_cone.S-LM6C5ax-4LSTs14MSTs40SSTs-MSTF_ID0.eff-5',
-    ]
-    electron = [
-        # CTA-N
-        "electron_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0",
-        "electron.N.D25-4LSTs09MSTs-MSTN_ID0.eff-1",
-        "electron.N.D25-4LSTs09MSTs-MSTN_ID0.eff-2",
-        "electron.N.D25-4LSTs09MSTs-MSTN_ID0.eff-3",
-        "electron.N.D25-4LSTs09MSTs-MSTN_ID0.eff-4",
-        "electron.N.D25-4LSTs09MSTs-MSTN_ID0.eff-5",
-        # CTA-S
-        # 'electron_onSource.S-LM6C5ax-4LSTs14MSTs40SSTs-MSTF_ID0.eff-0',
-        # 'electron.S-LM6C5ax-4LSTs14MSTs40SSTs-MSTF_ID0.eff-1',
-        # 'electron.S-LM6C5ax-4LSTs14MSTs40SSTs-MSTF_ID0.eff-2',
-        # 'electron.S-LM6C5ax-4LSTs14MSTs40SSTs-MSTF_ID0.eff-3',
-        # 'electron.S-LM6C5ax-4LSTs14MSTs40SSTs-MSTF_ID0.eff-4',
-        # 'electron.S-LM6C5ax-4LSTs14MSTs40SSTs-MSTF_ID0.eff-5',
-    ]
-    proton = [
-        # CTA-N
-        "proton_onSource.N.D25-4LSTs09MSTs-MSTN_ID0.eff-0",
-        "proton.N.D25-4LSTs09MSTs-MSTN_ID0.eff-1",
-        "proton.N.D25-4LSTs09MSTs-MSTN_ID0.eff-2",
-        "proton.N.D25-4LSTs09MSTs-MSTN_ID0.eff-3",
-        "proton.N.D25-4LSTs09MSTs-MSTN_ID0.eff-4",
-        "proton.N.D25-4LSTs09MSTs-MSTN_ID0.eff-5",
-        # CTA-S
-        # 'proton_onSource.S-LM6C5ax-4LSTs14MSTs40SSTs-MSTF_ID0.eff-0',
-        # 'proton.S-LM6C5ax-4LSTs14MSTs40SSTs-MSTF_ID0.eff-1',
-        # 'proton.S-LM6C5ax-4LSTs14MSTs40SSTs-MSTF_ID0.eff-2',
-        # 'proton.S-LM6C5ax-4LSTs14MSTs40SSTs-MSTF_ID0.eff-3',
-        # 'proton.S-LM6C5ax-4LSTs14MSTs40SSTs-MSTF_ID0.eff-4',
-        # 'proton.S-LM6C5ax-4LSTs14MSTs40SSTs-MSTF_ID0.eff-5',
-    ]
+    start_from_DL2 = False
+    bins_off_axis_angle = [0, 1, 2, 3, 4, 5]
+    layout_desc = "N.D25-4LSTs09MSTs-MSTN"  # LaPalma
+    # layout_desc = 'S-M6C8aj-14MSTs37SSTs-MSTF'  # Paranal
+    if start_from_DL2:
+        gamma = [f"gamma_cone.{layout_desc}_ID0.eff-{i}.root" for i in bins_off_axis_angle]
+        proton = [f"proton.{layout_desc}_ID0.eff-{i}.root" for i in bins_off_axis_angle]
+        electron = [f"electron.{layout_desc}_ID0.eff-{i}.root" for i in bins_off_axis_angle]
+    else:
+        gamma = [f"gamma_cone.{layout_desc}_ID0.eff-{i}" for i in bins_off_axis_angle]
+        electron = [f"electron.{layout_desc}_ID0.eff-{i}" for i in bins_off_axis_angle]
+        proton = [f"proton.{layout_desc}_ID0.eff-{i}" for i in bins_off_axis_angle]
 
     particles = [gamma, electron, proton]
 
     labels, train_features = event_types.nominal_labels_train_features()
-
+    # Select the model we want to use to classify the events.
     selected_model = "MLP_tanh"
-
     trained_model = event_types.load_models([selected_model])
     # Get the energy binning from the trained model
     e_ranges = list(trained_model[next(iter(trained_model))].keys())
@@ -81,9 +44,7 @@ if __name__ == "__main__":
     event_type_log_e_bins = np.arange(-1.7, 2.5, 0.2)
     # Camera offset binning (in degrees) used to separate event types. The binning is a test,
     # should be changed for better performance.
-    # event_type_offset_bins = np.arange(0, 5, 1)
-    # event_type_offset_bins = np.append(event_type_offset_bins, 10)
-    n_offset_bins = 5
+    n_offset_bins = 6
 
     # Number of event types we want to classify our data:
     n_types = 3
@@ -92,7 +53,10 @@ if __name__ == "__main__":
 
     for particle in particles:
         print("Exporting files: {}".format(particle))
-        dtf = event_types.load_dtf(particle)
+        if start_from_DL2:
+            dtf = event_types.extract_df_from_multiple_dl2(particle)
+        else:
+            dtf = event_types.load_dtf(particle)
         print("Total number of events: {}".format(len(dtf)))
 
         # We only bin in energy here to have the same file as in the training and be able to have

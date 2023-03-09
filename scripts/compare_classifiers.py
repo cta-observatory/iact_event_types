@@ -8,7 +8,7 @@ from event_types import event_types
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description=("An example script how to compare clssifiers."))
+    parser = argparse.ArgumentParser(description="An example script how to compare classifiers.")
 
     args = parser.parse_args()
 
