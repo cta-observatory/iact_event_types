@@ -11,19 +11,31 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     start_from_DL2 = False
+    on_source = False
     bins_off_axis_angle = [0, 1, 2, 3, 4, 5]
-    layout_desc = "N.D25-4LSTs09MSTs-MSTN"  # LaPalma
-    # layout_desc = 'S-M6C8aj-14MSTs37SSTs-MSTF'  # Paranal
+    location = "North"
+    if location == "North":  # LaPalma
+        layout_desc = "N.D25-4LSTs09MSTs-MSTN"
+        path = "../../data/LongFiles/North/"
+    elif location == "South":  # Paranal
+        layout_desc = 'S-M6C8aj-14MSTs37SSTs-MSTF'
+        path = "../../data/LongFiles/South/"
+    else:
+        raise ValueError("Location not recognized. Must be North or South.")
+
     if start_from_DL2:
-        dl2_file_names = [
-            "../../data/LongFiles/North/"
-            f"gamma_cone.{layout_desc}_ID0.eff-{i}.root" for i in bins_off_axis_angle
-        ]
+        if on_source:
+            dl2_file_names = [path + f"gamma_onSource.{layout_desc}_ID0.eff-0.root"]
+        else:
+            dl2_file_names = [path + f"gamma_cone.{layout_desc}_ID0.eff-{i}.root" for i in bins_off_axis_angle]
         dtf = event_types.extract_df_from_multiple_dl2(dl2_file_names)
     else:
-        dtf = event_types.load_dtf(
-            [f"gamma_cone.{layout_desc}_ID0.eff-{i}" for i in bins_off_axis_angle]
-        )
+        if on_source:
+            dtf = event_types.load_dtf([f"gamma_onSource.{layout_desc}_ID0.eff-0"])
+        else:
+            dtf = event_types.load_dtf(
+                [f"gamma_cone.{layout_desc}_ID0.eff-{i}" for i in bins_off_axis_angle]
+            )
 
     # For the training, make sure we do not use events with cut_class == 7 (non gamma-like events)
     # dtf = dtf[dtf['cut_class'] != 7].dropna()

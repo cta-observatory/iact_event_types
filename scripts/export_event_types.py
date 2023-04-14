@@ -13,17 +13,36 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     start_from_DL2 = False
+    on_source = False
     bins_off_axis_angle = [0, 1, 2, 3, 4, 5]
-    layout_desc = "N.D25-4LSTs09MSTs-MSTN"  # LaPalma
-    # layout_desc = 'S-M6C8aj-14MSTs37SSTs-MSTF'  # Paranal
-    if start_from_DL2:
-        gamma = [f"gamma_cone.{layout_desc}_ID0.eff-{i}.root" for i in bins_off_axis_angle]
-        proton = [f"proton.{layout_desc}_ID0.eff-{i}.root" for i in bins_off_axis_angle]
-        electron = [f"electron.{layout_desc}_ID0.eff-{i}.root" for i in bins_off_axis_angle]
+    location = "North"
+    if location == "North":  # LaPalma
+        layout_desc = "N.D25-4LSTs09MSTs-MSTN"
+        path = "../../data/LongFiles/North/"
+    elif location == "South":  # Paranal
+        layout_desc = 'S-M6C8aj-14MSTs37SSTs-MSTF'
+        path = "../../data/LongFiles/South/"
     else:
-        gamma = [f"gamma_cone.{layout_desc}_ID0.eff-{i}" for i in bins_off_axis_angle]
-        electron = [f"electron.{layout_desc}_ID0.eff-{i}" for i in bins_off_axis_angle]
-        proton = [f"proton.{layout_desc}_ID0.eff-{i}" for i in bins_off_axis_angle]
+        raise ValueError("Location not recognized. Must be North or South.")
+
+    if start_from_DL2:
+        if on_source:
+            gamma = [path + f"gamma_onSource.{layout_desc}_ID0.eff-0.root"]
+            proton = [path + f"proton_onSource.{layout_desc}_ID0.eff-0.root"]
+            electron = [path + f"electron_onSource.{layout_desc}_ID0.eff-0.root"]
+        else:
+            gamma = [path + f"gamma_cone.{layout_desc}_ID0.eff-{i}.root" for i in bins_off_axis_angle]
+            proton = [path + f"proton.{layout_desc}_ID0.eff-{i}.root" for i in bins_off_axis_angle]
+            electron = [path + f"electron.{layout_desc}_ID0.eff-{i}.root" for i in bins_off_axis_angle]
+    else:
+        if on_source:
+            gamma = [f"gamma_onSource.{layout_desc}_ID0.eff-0"]
+            proton = [f"proton_onSource.{layout_desc}_ID0.eff-0"]
+            electron = [f"electron_onSource.{layout_desc}_ID0.eff-0"]
+        else:
+            gamma = [f"gamma_cone.{layout_desc}_ID0.eff-{i}" for i in bins_off_axis_angle]
+            electron = [f"electron.{layout_desc}_ID0.eff-{i}" for i in bins_off_axis_angle]
+            proton = [f"proton.{layout_desc}_ID0.eff-{i}" for i in bins_off_axis_angle]
 
     particles = [gamma, electron, proton]
 
@@ -44,7 +63,10 @@ if __name__ == "__main__":
     event_type_log_e_bins = np.arange(-1.7, 2.5, 0.2)
     # Camera offset binning (in degrees) used to separate event types. The binning is a test,
     # should be changed for better performance.
-    n_offset_bins = 6
+    if on_source:
+        n_offset_bins = 1
+    else:
+        n_offset_bins = 6
 
     # Number of event types we want to classify our data:
     n_types = 3
@@ -139,7 +161,7 @@ if __name__ == "__main__":
         # i.e. events with no other type assigned.
 
         file_name = (
-            particle[0].replace(".eff-0", ".txt").replace("_cone", "").replace("_onSource", "")
+            particle[0].replace(".eff-0", ".txt").replace(".root", "")
         )
         with open(file_name, "w") as txt_file:
             for value in dtf["event_type"]:
