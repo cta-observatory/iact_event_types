@@ -49,14 +49,13 @@ if __name__ == "__main__":
     labels, train_features = event_types.nominal_labels_train_features()
     # Select the model we want to use to classify the events.
     selected_model = "MLP_tanh"
-    trained_model = event_types.load_models([selected_model])
+    suffix = "onSource" if on_source else "offaxis"
+    trained_model = event_types.load_models(selected_model, suffix=suffix)
     # Get the energy binning from the trained model
     e_ranges = list(trained_model[next(iter(trained_model))].keys())
     # Sometimes they do not come in order... Here we fix that case.
     e_ranges.sort()
     log_e_reco_bins = np.log10(event_types.extract_energy_bins(e_ranges))
-    model = trained_model[next(iter(trained_model))]
-    suffix = model[next(iter(model))]["test_data_suffix"]
 
     # Energy binning (in log10 TeV) used to separate event types. We use the binning usually used in
     # sensitivity curves, extended to lower and higher energies.

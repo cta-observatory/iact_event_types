@@ -14,37 +14,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    labels, train_features = event_types.nominal_labels_train_features()
-
-    features = dict()
-    features["all_features"] = train_features
-    features["no_reco_diff"] = copy.copy(train_features)
-    for feature_name in train_features:
-        if feature_name.endswith("log_reco_diff"):
-            features["no_reco_diff"].remove(feature_name)
-    # features['no_length'] = copy.copy(train_features)
-    # for feature_name in train_features:
-    #     if feature_name.endswith('_length'):
-    #         features['no_length'].remove(feature_name)
-    # features['no_dispCombine'] = copy.copy(train_features)
-    # for feature_name in train_features:
-    #     if feature_name.endswith('_dispCombine'):
-    #         features['no_dispCombine'].remove(feature_name)
-    # features['old_features'] = copy.copy(train_features)
-    # for feature_name in train_features:
-    #     if any(feature_name.endswith(suffix) for suffix in ['_width', '_length', '_dispCombine']):
-    #         features['old_features'].remove(feature_name)
-
-    models_to_train = dict()
-    all_models = event_types.define_regressors()
-    for features_name, these_features in features.items():
-        print(features_name, these_features)
-        models_to_train[features_name] = dict()
-        models_to_train[features_name]["train_features"] = these_features
-        models_to_train[features_name]["labels"] = labels
-        models_to_train[features_name]["model"] = all_models["MLP_tanh"]
-        models_to_train[features_name]["test_data_suffix"] = "default"
-
     start_from_DL2 = False
     on_source = False
     bins_off_axis_angle = [0, 1, 2, 3, 4, 5]
@@ -80,6 +49,38 @@ if __name__ == "__main__":
         dtf_e, test_size=0.75, random_state=777
     )
 
+    labels, train_features = event_types.nominal_labels_train_features()
+
+    features = dict()
+    features["all_features"] = train_features
+    features["no_reco_diff"] = copy.copy(train_features)
+    for feature_name in train_features:
+        if feature_name.endswith("log_reco_diff"):
+            features["no_reco_diff"].remove(feature_name)
+    # features['no_length'] = copy.copy(train_features)
+    # for feature_name in train_features:
+    #     if feature_name.endswith('_length'):
+    #         features['no_length'].remove(feature_name)
+    # features['no_dispCombine'] = copy.copy(train_features)
+    # for feature_name in train_features:
+    #     if feature_name.endswith('_dispCombine'):
+    #         features['no_dispCombine'].remove(feature_name)
+    # features['old_features'] = copy.copy(train_features)
+    # for feature_name in train_features:
+    #     if any(feature_name.endswith(suffix) for suffix in ['_width', '_length', '_dispCombine']):
+    #         features['old_features'].remove(feature_name)
+
+    models_to_train = dict()
+    all_models = event_types.define_regressors()
+    suffix = "onSource" if on_source else "offaxis"
+    for features_name, these_features in features.items():
+        print(features_name, these_features)
+        models_to_train[features_name] = dict()
+        models_to_train[features_name]["train_features"] = these_features
+        models_to_train[features_name]["labels"] = labels
+        models_to_train[features_name]["model"] = all_models["MLP_tanh"]
+        models_to_train[features_name]["test_data_suffix"] = suffix
+
     trained_models = event_types.train_models(dtf_e_train, models_to_train)
     event_types.save_models(trained_models)
-    event_types.save_test_dtf(dtf_e_test)
+    event_types.save_test_dtf(dtf_e_test, suffix=suffix)

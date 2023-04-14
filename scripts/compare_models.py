@@ -70,6 +70,8 @@ if __name__ == "__main__":
         # 'MLP_tanh_large',
     ]
 
+    suffix = ""
+
     if len(models_to_compare) > 1:
         group_models_to_compare = np.array_split(
             models_to_compare, ceil(len(models_to_compare) / 5)
@@ -79,7 +81,7 @@ if __name__ == "__main__":
 
     for i_group, these_models_to_compare in enumerate(group_models_to_compare):
 
-        trained_models = event_types.load_models(these_models_to_compare)
+        trained_models = event_types.load_models(these_models_to_compare, suffix=suffix)
         dataset_names = event_types.extract_unique_dataset_names(trained_models)
         dtf_e_test = event_types.load_multi_test_dtfs(dataset_names)
 

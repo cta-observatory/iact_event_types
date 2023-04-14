@@ -1203,10 +1203,11 @@ def save_models(trained_models):
 
     for model_name, this_model in trained_models.items():
         Path("models").joinpath(model_name).mkdir(parents=True, exist_ok=True)
+        suffix = this_model[next(iter(this_model))]["test_data_suffix"]
         for this_e_range, model_now in this_model.items():
             e_range_name = this_e_range.replace(" < ", "-").replace(" ", "_")
 
-            model_file_name = Path("models").joinpath(model_name, "{}.joblib".format(e_range_name))
+            model_file_name = Path("models").joinpath(model_name, "{}_{}.joblib".format(e_range_name, suffix))
             dump(model_now, model_file_name, compress=3)
 
     return
@@ -1319,7 +1320,7 @@ def load_multi_test_dtfs(data_names=["default"]):
     return dtf_e_test
 
 
-def load_models(model_names=list()):
+def load_models(model_names, suffix=""):
     """
     Read the trained models from disk.
     The path for the models is in models/'model name'.
@@ -1328,7 +1329,9 @@ def load_models(model_names=list()):
     Parameters
     ----------
     model_names: list of str
-        A list of model names to load from disk
+        A list of model names to load.
+    suffix: str
+        The suffix added to the file name. The default is "".
 
     Returns
     -------
@@ -1347,11 +1350,11 @@ def load_models(model_names=list()):
     trained_models = defaultdict(dict)
 
     for model_name in model_names:
-        print("Loading the {} model".format(model_name))
+        print("Loading the {} model with suffix {}".format(model_name, suffix))
         models_dir = Path("models").joinpath(model_name)
         for this_file in sorted(models_dir.iterdir()):
-
-            if this_file.is_file():
+            # Load the files that end with the suffix
+            if this_file.is_file() and this_file.suffix == ".joblib" and this_file.stem.endswith(suffix):
                 e_range_name = this_file.stem.replace("-", " < ").replace("_", " ")
                 trained_models[model_name][e_range_name] = load(this_file)
 

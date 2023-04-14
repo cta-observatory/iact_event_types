@@ -73,13 +73,14 @@ if __name__ == "__main__":
     ]
 
     models_to_train = dict()
+    suffix = "on_source" if on_source else "offaxis"
     for this_model in selected_models:
         models_to_train[this_model] = dict()
         models_to_train[this_model]["train_features"] = train_features
         models_to_train[this_model]["labels"] = labels
         models_to_train[this_model]["model"] = all_models[this_model]
-        models_to_train[this_model]["test_data_suffix"] = "default"
+        models_to_train[this_model]["test_data_suffix"] = suffix
 
     trained_models = event_types.train_models(dtf_e_train, models_to_train)
     event_types.save_models(trained_models)
-    event_types.save_test_dtf(dtf_e_test, suffix="default")
+    event_types.save_test_dtf(dtf_e_test, suffix=suffix)
