@@ -73,7 +73,7 @@ if __name__ == "__main__":
     ]
 
     models_to_train = dict()
-    suffix = "on_source" if on_source else "offaxis"
+    suffix = "onSource" if on_source else "offaxis"
     for this_model in selected_models:
         models_to_train[this_model] = dict()
         models_to_train[this_model]["train_features"] = train_features

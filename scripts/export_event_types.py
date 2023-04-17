@@ -48,7 +48,7 @@ if __name__ == "__main__":
 
     labels, train_features = event_types.nominal_labels_train_features()
     # Select the model we want to use to classify the events.
-    selected_model = "MLP_tanh"
+    selected_model = ["MLP_tanh"]
     suffix = "onSource" if on_source else "offaxis"
     trained_model = event_types.load_models(selected_model, suffix=suffix)
     # Get the energy binning from the trained model

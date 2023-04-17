@@ -1350,13 +1350,23 @@ def load_models(model_names, suffix=""):
     trained_models = defaultdict(dict)
 
     for model_name in model_names:
-        print("Loading the {} model with suffix {}".format(model_name, suffix))
+        if suffix == "":
+            print("Loading the {} model".format(model_name))
+        else:
+            print("Loading the {} model with suffix {}".format(model_name, suffix))
         models_dir = Path("models").joinpath(model_name)
         for this_file in sorted(models_dir.iterdir()):
-            # Load the files that end with the suffix
-            if this_file.is_file() and this_file.suffix == ".joblib" and this_file.stem.endswith(suffix):
-                e_range_name = this_file.stem.replace("-", " < ").replace("_", " ")
-                trained_models[model_name][e_range_name] = load(this_file)
+            if suffix == "":
+                # Load the files that do not end with the suffix
+                if this_file.is_file() and this_file.suffix == ".joblib" and not this_file.stem.endswith(suffix):
+                    e_range_name = this_file.stem.replace("-", " < ").replace("_", " ")
+                    trained_models[model_name][e_range_name] = load(this_file)
+            else:
+                # Load the files that end with the suffix
+                if this_file.is_file() and this_file.suffix == ".joblib" and this_file.stem.endswith(suffix):
+                    e_range_name = this_file.stem.replace("_" + suffix, "")
+                    e_range_name = e_range_name.replace("-", " < ").replace("_", " ")
+                    trained_models[model_name][e_range_name] = load(this_file)
 
     return trained_models
 
