@@ -1440,6 +1440,7 @@ def partition_event_types(
         type_bins="equal statistics",
         return_partition=False,
         event_type_bins=None,
+        save_true_types=False,
 ):
     """
     Divide the events into n_types event types in each energy and offset bin.
@@ -1572,12 +1573,18 @@ def partition_event_types(
         # If there are -2 values at the end, it means those indexes weren't filled here,
         # i.e. those events are not in the defined energy/offset bins.
         this_dtf["event_type"] = -2
+        if save_true_types:
+            this_dtf["true_event_type"] = -2
         # Fill 'event_type' column with the right event types, using the 'reco' dict.
         for energy_key in dtf_binned_test.keys():
             for offset_key in dtf_binned_test[energy_key].keys():
                 this_dtf.loc[
                     dtf_binned_test[energy_key][offset_key].index.values, "event_type"
                 ] = event_types[model_name][energy_key][offset_key]["reco"]
+                if save_true_types:
+                    this_dtf.loc[
+                        dtf_binned_test[energy_key][offset_key].index.values, "true_event_type"
+                    ] = event_types[model_name][energy_key][offset_key]["true"]
 
     if return_partition:
         return event_types, event_type_bins

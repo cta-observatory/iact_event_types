@@ -50,6 +50,8 @@ if __name__ == "__main__":
     n_types = 3
     # This variable will store the event type partitioning container.
     event_type_partition = None
+    # Option to get true event types.
+    true_event_types = True
 
     for particle in particles:
         print("Exporting files: {}".format(particle))
@@ -89,6 +91,7 @@ if __name__ == "__main__":
                 n_offset_bins=n_offset_bins,
                 n_types=n_types,
                 return_partition=True,
+                save_true_types=true_event_types,
             )
 
         else:
@@ -101,19 +104,28 @@ if __name__ == "__main__":
                 n_offset_bins=n_offset_bins,
                 n_types=n_types,
                 event_type_bins=event_type_partition,
+                save_true_types=true_event_types,
             )
 
         # Start creating the event_type column within the original dataframe,
         # setting the default value: -3.
         # There shouldn't be many -3s at the end. If that's the case, it must be understood.
         dtf["event_type"] = -3
+        if true_event_types:
+            dtf["true_event_type"] = -3
 
         if particle is gamma:
             # Assign type -1 to the events used for the training.
             for energy_key in dtf_e_train.keys():
                 dtf.loc[dtf_e_train[energy_key].index.values, "event_type"] = -1
+                if true_event_types:
+                    dtf.loc[dtf_e_train[energy_key].index.values, "true_event_type"] = -1
 
         dtf.loc[dtf_test[suffix].index.values, "event_type"] = dtf_test[suffix]["event_type"]
+        if true_event_types:
+            dtf.loc[dtf_test[suffix].index.values, "true_event_type"] = dtf_test[suffix][
+                "true_event_type"
+            ]
 
         print("A total of {} events will be written.".format(len(dtf["event_type"])))
         dtf_7 = dtf[dtf["cut_class"] != 7]
@@ -128,6 +140,18 @@ if __name__ == "__main__":
                     np.sum(dtf_7["event_type"] == event_type), event_type
                 )
             )
+            if true_event_types:
+                print(
+                    "A total of {} events of true type {}".format(
+                        np.sum(dtf["true_event_type"] == event_type), event_type
+                    )
+                )
+                print(
+                    "A total of {} events of true type {} for gamma-like events".format(
+                        np.sum(dtf_7["true_event_type"] == event_type), event_type
+                    )
+                )
+
         # Summary:
         # Types 1, 2 and 3 are actual reconstructed event types, where 1 is the best type and
         # all three should have similar statistics.
@@ -144,3 +168,11 @@ if __name__ == "__main__":
         with open(file_name, "w") as txt_file:
             for value in dtf["event_type"]:
                 txt_file.write("{}\n".format(value))
+
+        if true_event_types:
+            file_name = (
+                particle[0].replace(".eff-0", "_true.txt").replace("_cone", "").replace("_onSource", "")
+            )
+            with open(file_name, "w") as txt_file:
+                for value in dtf["true_event_type"]:
+                    txt_file.write("{}\n".format(value))
