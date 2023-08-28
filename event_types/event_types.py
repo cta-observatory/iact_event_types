@@ -1482,6 +1482,8 @@ def partition_event_types(
             keys=energy ranges, values=3rd dict
         3rd dict:
             keys=offset ranges, values=partition values array
+    save_true_types: Bool (default=False)
+        If true, the true event types will be saved into the dataframe.
     Returns
     -------
     event_types: nested dict

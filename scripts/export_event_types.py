@@ -122,10 +122,15 @@ if __name__ == "__main__":
                     dtf.loc[dtf_e_train[energy_key].index.values, "true_event_type"] = -1
 
         dtf.loc[dtf_test[suffix].index.values, "event_type"] = dtf_test[suffix]["event_type"]
+        # Assign true event types as calculated for gammas, but not for protons and electrons, which should be random.
         if true_event_types:
-            dtf.loc[dtf_test[suffix].index.values, "true_event_type"] = dtf_test[suffix][
-                "true_event_type"
-            ]
+            if particle is gamma:
+                dtf.loc[dtf_test[suffix].index.values, "true_event_type"] = dtf_test[suffix][
+                    "true_event_type"
+                ]
+            else:
+                # Assign random true event types for protons and electrons. Possible values are from 1 to n_types.
+                dtf["true_event_type"] = np.random.randint(1, n_types + 1, size=len(dtf))
 
         print("A total of {} events will be written.".format(len(dtf["event_type"])))
         dtf_7 = dtf[dtf["cut_class"] != 7]
