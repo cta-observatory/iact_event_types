@@ -1542,6 +1542,7 @@ def partition_event_types(
                 event_types[model_name][this_e_range][this_offset_range] = defaultdict(list)
 
                 event_types_bins = mstats.mquantiles(dtf_this_e_offset["y_pred"], type_bins)
+                event_types_bins_true = mstats.mquantiles(dtf_this_e_offset[labels].values, type_bins)
 
                 # If return_partition is True, then store the event type bins into the container.
                 if return_partition:
@@ -1562,7 +1563,7 @@ def partition_event_types(
                     )
 
                 for this_value in dtf_this_e_offset[labels].values:
-                    this_event_type = np.searchsorted(event_types_bins, this_value)
+                    this_event_type = np.searchsorted(event_types_bins_true, this_value)
                     if this_event_type < 1:
                         this_event_type = 1
                     if this_event_type > n_types:
