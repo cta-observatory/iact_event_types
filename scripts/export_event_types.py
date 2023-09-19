@@ -1,6 +1,8 @@
 import argparse
 
 import numpy as np
+import matplotlib.pyplot as plt
+from pathlib import Path
 
 from event_types import event_types
 
@@ -52,6 +54,8 @@ if __name__ == "__main__":
     event_type_partition = None
     # Option to get true event types.
     true_event_types = True
+    # Option to plot event types distributions.
+    plot_event_types = True
 
     for particle in particles:
         print("Exporting files: {}".format(particle))
@@ -104,7 +108,6 @@ if __name__ == "__main__":
                 n_offset_bins=n_offset_bins,
                 n_types=n_types,
                 event_type_bins=event_type_partition,
-                save_true_types=true_event_types,
             )
 
         # Start creating the event_type column within the original dataframe,
@@ -122,10 +125,15 @@ if __name__ == "__main__":
                     dtf.loc[dtf_e_train[energy_key].index.values, "true_event_type"] = -1
 
         dtf.loc[dtf_test[suffix].index.values, "event_type"] = dtf_test[suffix]["event_type"]
+        # Assign true event types as calculated for gammas. For protons and electrons, assign the same as reco.
         if true_event_types:
-            dtf.loc[dtf_test[suffix].index.values, "true_event_type"] = dtf_test[suffix][
-                "true_event_type"
-            ]
+            if particle is gamma:
+                dtf.loc[dtf_test[suffix].index.values, "true_event_type"] = dtf_test[suffix][
+                    "true_event_type"
+                ]
+            else:
+                # For protons and electrons, assume same event types for reco and true.
+                dtf["true_event_type"] = dtf["event_type"]
 
         print("A total of {} events will be written.".format(len(dtf["event_type"])))
         dtf_7 = dtf[dtf["cut_class"] != 7]
@@ -151,6 +159,30 @@ if __name__ == "__main__":
                         np.sum(dtf_7["true_event_type"] == event_type), event_type
                     )
                 )
+
+        if plot_event_types:
+            Path("plots").mkdir(parents=True, exist_ok=True)
+            # Plot and save the event type distributions.
+            if true_event_types:
+                distribution = event_types.plot_event_type_distribution(
+                    [dtf["event_type"], dtf_7["event_type"], dtf["true_event_type"], dtf_7["true_event_type"]],
+                    label=["all", "gamma-like", "all true", "gamma-like true"],
+                    n_types=n_types,
+                )
+            else:
+                distribution = event_types.plot_event_type_distribution(
+                    [dtf["event_type"], dtf_7["event_type"]], label=["all", "gamma-like"], n_types=n_types
+                )
+
+            if particle is gamma:
+                plt.title("Event type distribution: Gammas")
+                plt.savefig("plots/event_type_distribution_gamma.pdf")
+            elif particle is electron:
+                plt.title("Event type distribution: Electrons")
+                plt.savefig("plots/event_type_distribution_electron.pdf")
+            elif particle is proton:
+                plt.title("Event type distribution: Protons")
+                plt.savefig("plots/event_type_distribution_proton.pdf")
 
         # Summary:
         # Types 1, 2 and 3 are actual reconstructed event types, where 1 is the best type and

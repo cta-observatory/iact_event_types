@@ -1482,6 +1482,8 @@ def partition_event_types(
             keys=energy ranges, values=3rd dict
         3rd dict:
             keys=offset ranges, values=partition values array
+    save_true_types: Bool (default=False)
+        If true, the true event types will be saved into the dataframe.
     Returns
     -------
     event_types: nested dict
@@ -1540,6 +1542,7 @@ def partition_event_types(
                 event_types[model_name][this_e_range][this_offset_range] = defaultdict(list)
 
                 event_types_bins = mstats.mquantiles(dtf_this_e_offset["y_pred"], type_bins)
+                event_types_bins_true = mstats.mquantiles(dtf_this_e_offset[labels].values, type_bins)
 
                 # If return_partition is True, then store the event type bins into the container.
                 if return_partition:
@@ -1560,7 +1563,7 @@ def partition_event_types(
                     )
 
                 for this_value in dtf_this_e_offset[labels].values:
-                    this_event_type = np.searchsorted(event_types_bins, this_value)
+                    this_event_type = np.searchsorted(event_types_bins_true, this_value)
                     if this_event_type < 1:
                         this_event_type = 1
                     if this_event_type > n_types:
@@ -2154,6 +2157,45 @@ def plot_1d_confusion_matrix(event_types, trained_model_name, n_types=2):
         fontsize=18,
         transform=axs[nrows - 1, ncols - 1].transAxes,
     )
+    plt.tight_layout()
+
+    return plt
+
+
+def plot_event_type_distribution(event_types, label, n_types=3):
+    """
+    Plot the distribution of the event types for a given dataframe.
+
+    Parameters
+    ----------
+    event_types: column of a pandas DataFrame or list of columns
+        The column(s) containing the event types.
+    label: str or list of str
+        The label for the legend associated to each DataFrame.
+    n_types: int (default=3)
+        The number of event types in which the data is divided.
+
+    Returns
+    -------
+    A pyplot instance with the event type distribution plot.
+    """
+
+    setStyle()
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    ax.hist(
+        event_types,
+        bins=np.arange(0.5, n_types + 1.5, 1),
+        histtype="bar",
+        label=label,
+    )
+
+    ax.set_xlabel("Event type")
+    ax.set_ylabel("Number of events")
+    ax.set_xticks(np.arange(1, n_types + 1, 1))
+    ax.set_xticklabels(np.arange(1, n_types + 1, 1))
+    ax.legend()
     plt.tight_layout()
 
     return plt
