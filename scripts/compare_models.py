@@ -20,10 +20,10 @@ if __name__ == "__main__":
 
     labels, train_features = event_types.nominal_labels_train_features()
 
-    plot_predict_dist = False
+    plot_predict_dist = True
     plot_scores = True
-    plot_confusion_matrix = False
-    plot_1d_conf_matrix = False
+    plot_confusion_matrix = True
+    plot_1d_conf_matrix = True
     n_types = 3
     type_bins = list(np.linspace(0, 1, n_types + 1))
     # type_bins = [0, 0.2, 0.8, 1]
@@ -57,12 +57,12 @@ if __name__ == "__main__":
     #     "no_reco_diff",
     # ]
     models_to_compare = [
-        "random_forest_300_15",
-        "random_forest_300_20",
-        "random_forest_500_15",
-        "random_forest_500_20",
-        "random_forest_2000_5",
-        # "MLP_tanh",
+        # "random_forest_300_15",
+        # "random_forest_300_20",
+        # "random_forest_500_15",
+        # "random_forest_500_20",
+        # "random_forest_2000_5",
+        "MLP_tanh",
         # 'MLP_relu',
         # 'MLP_logistic',
         # 'MLP_uniform',
@@ -111,7 +111,7 @@ if __name__ == "__main__":
             log_e_reco_bins = np.log10(event_types.extract_energy_bins(e_ranges))
 
             event_types_lists = event_types.partition_event_types(
-                dtf_test, labels, log_e_reco_bins, n_types, type_bins
+                dtf_test, labels, log_e_reco_bins, n_types=n_types, type_bins=type_bins, save_true_types=True
             )
             for this_trained_model_name, this_event_types in event_types_lists.items():
                 plt = event_types.plot_confusion_matrix(

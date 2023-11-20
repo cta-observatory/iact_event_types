@@ -2016,7 +2016,7 @@ def plot_scores(scores):
     return plt
 
 
-def plot_confusion_matrix(event_types, trained_model_name, n_types=2):
+def plot_confusion_matrix(event_types, trained_model_name, n_types=3):
     """
     Plot the confusion matrix of the model for all energy bins.
 
@@ -2026,10 +2026,12 @@ def plot_confusion_matrix(event_types, trained_model_name, n_types=2):
         1st dict:
             keys=energy ranges, values=2nd dict
         2nd dict:
+            keys=offset ranges, values=3rd dict
+        3rd dict:
             keys=true or reco, values=event type
     trained_model_name: str
         Name of the model used to obtain the reconstructed event types
-    n_types: int (default=2)
+    n_types: int (default=3)
         The number of types the data was divided in.
 
     Returns
@@ -2047,9 +2049,12 @@ def plot_confusion_matrix(event_types, trained_model_name, n_types=2):
     for i_plot, this_e_range in enumerate(event_types.keys()):
         ax = axs[int(np.floor(i_plot / ncols)), i_plot % ncols]
 
+        # Get offset key
+        offset_key = next(iter(event_types[this_e_range]))
+
         cm = confusion_matrix(
-            event_types[this_e_range]["true"],
-            event_types[this_e_range]["reco"],
+            event_types[this_e_range][offset_key]["true"],
+            event_types[this_e_range][offset_key]["reco"],
             normalize="true",
         )
         sns.heatmap(
@@ -2081,7 +2086,7 @@ def plot_confusion_matrix(event_types, trained_model_name, n_types=2):
     return plt
 
 
-def plot_1d_confusion_matrix(event_types, trained_model_name, n_types=2):
+def plot_1d_confusion_matrix(event_types, trained_model_name, n_types=3):
     """
     Plot a one-dimensional confusion matrix of the model for all energy bins.
 
@@ -2091,6 +2096,8 @@ def plot_1d_confusion_matrix(event_types, trained_model_name, n_types=2):
         1st dict:
             keys=energy ranges, values=2nd dict
         2nd dict:
+            keys=offset ranges, values=3rd dict
+        3rd dict:
             keys=true or reco, values=event type
     trained_model_name: str
         Name of the model used to obtain the reconstructed event types
@@ -2113,9 +2120,11 @@ def plot_1d_confusion_matrix(event_types, trained_model_name, n_types=2):
 
         ax = axs[int(np.floor(i_plot / ncols)), i_plot % ncols]
 
+        offset_key = next(iter(event_types[this_e_range]))
+
         pred_error = np.abs(
-            np.array(event_types[this_e_range]["true"])
-            - np.array(event_types[this_e_range]["reco"])
+            np.array(event_types[this_e_range][offset_key]["true"])
+            - np.array(event_types[this_e_range][offset_key]["reco"])
         )
         frac_pred_error = list()
         for i_type in range(n_types):
@@ -2139,8 +2148,8 @@ def plot_1d_confusion_matrix(event_types, trained_model_name, n_types=2):
         ax.set_title(
             "Score(F1) = {:.2f}\n{}".format(
                 f1_score(
-                    event_types[this_e_range]["true"],
-                    event_types[this_e_range]["reco"],
+                    event_types[this_e_range][offset_key]["true"],
+                    event_types[this_e_range][offset_key]["reco"],
                     average="macro",
                 ),
                 this_e_range,
