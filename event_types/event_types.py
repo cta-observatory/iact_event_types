@@ -714,7 +714,7 @@ def bin_data_in_energy_and_offset(
 
     if log_e_reco_bins is None:
         log_e_reco_bins = mstats.mquantiles(
-            dtf["log_reco_energy"].values, np.linspace(0, 1, n_e_bins)
+            dtf["log_reco_energy"].values, np.linspace(0, 1, n_e_bins + 1)
         )
 
     check_bins()
