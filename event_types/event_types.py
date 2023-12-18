@@ -1802,7 +1802,7 @@ def plot_test_vs_predict(dtf_e_test, trained_models, trained_model_name):
     A pyplot instance with the test vs. prediction plot.
     """
 
-    nrows = 5
+    nrows = np.ceil(len(trained_models) / 4).astype(int)
     ncols = 4
 
     fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=[14, 18])
@@ -1910,7 +1910,6 @@ def plot_matrix(dtf, train_features, labels, n_types=2, plot_events=20000):
 def plot_score_comparison(dtf_e_test, trained_models):
     """
     Plot the score of the model as a function of energy.
-    #TODO add a similar function that plots from saved scores instead of calculating every time.
 
     Parameters
     ----------
@@ -1943,11 +1942,12 @@ def plot_score_comparison(dtf_e_test, trained_models):
     fig, ax = plt.subplots(figsize=(8, 6))
 
     scores = defaultdict(dict)
-    energy_bins = extract_energy_bins_centers(trained_models[next(iter(trained_models))].keys())
 
     for this_model_name, trained_model in trained_models.items():
 
         print("Calculating scores for {}".format(this_model_name))
+
+        energy_bins = extract_energy_bins_centers(trained_model.keys())
 
         scores_this_model = list()
         for this_e_range, this_model in trained_model.items():
