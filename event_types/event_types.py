@@ -38,6 +38,9 @@ from sklearn.pipeline import make_pipeline
 from sklearn.svm import SVC, SVR, LinearSVR
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 
+# Energy binning (in log10 TeV) used to separate event types. We use the binning usually used in
+# sensitivity curves, extended to lower and higher energies.
+sensitivity_log_e_bins = np.arange(-1.7, 2.5, 0.2)
 
 def setStyle(palette="default", bigPlot=False):
     """
