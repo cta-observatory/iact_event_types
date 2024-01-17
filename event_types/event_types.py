@@ -1400,11 +1400,11 @@ def add_predict_column(dtf_e_test, trained_models):
     """
 
     dtf_test_squashed = dict()
-    list_of_dtfs = list()
 
     for model_name, model in trained_models.items():
 
         print("Calculating the predictions for the {} model".format(model_name))
+        list_of_dtfs = list()
 
         for this_e_range, this_model in model.items():
 
@@ -1805,7 +1805,7 @@ def plot_test_vs_predict(dtf_e_test, trained_models, trained_model_name):
     A pyplot instance with the test vs. prediction plot.
     """
 
-    nrows = np.ceil(len(trained_models) / 4).astype(int)
+    nrows = np.ceil(len(trained_models) / 4).astype(int) + 1
     ncols = 4
 
     fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=[14, 18])
@@ -2044,7 +2044,7 @@ def plot_confusion_matrix(event_types, trained_model_name, n_types=3):
 
     # setStyle()
 
-    nrows = 5
+    nrows = np.ceil(len(event_types) / 4).astype(int) + 1
     ncols = 4
 
     fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=[14, 18])
