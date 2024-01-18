@@ -38,6 +38,9 @@ from sklearn.pipeline import make_pipeline
 from sklearn.svm import SVC, SVR, LinearSVR
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 
+# Energy binning (in log10 TeV) used to separate event types. We use the binning usually used in
+# sensitivity curves, extended to lower and higher energies.
+sensitivity_log_e_bins = np.arange(-1.7, 2.5, 0.2)
 
 def setStyle(palette="default", bigPlot=False):
     """
@@ -714,7 +717,7 @@ def bin_data_in_energy_and_offset(
 
     if log_e_reco_bins is None:
         log_e_reco_bins = mstats.mquantiles(
-            dtf["log_reco_energy"].values, np.linspace(0, 1, n_e_bins)
+            dtf["log_reco_energy"].values, np.linspace(0, 1, n_e_bins + 1)
         )
 
     check_bins()
@@ -1397,11 +1400,11 @@ def add_predict_column(dtf_e_test, trained_models):
     """
 
     dtf_test_squashed = dict()
-    list_of_dtfs = list()
 
     for model_name, model in trained_models.items():
 
         print("Calculating the predictions for the {} model".format(model_name))
+        list_of_dtfs = list()
 
         for this_e_range, this_model in model.items():
 
@@ -1802,7 +1805,7 @@ def plot_test_vs_predict(dtf_e_test, trained_models, trained_model_name):
     A pyplot instance with the test vs. prediction plot.
     """
 
-    nrows = 5
+    nrows = np.ceil(len(trained_models) / 4).astype(int) + 1
     ncols = 4
 
     fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=[14, 18])
@@ -1910,7 +1913,6 @@ def plot_matrix(dtf, train_features, labels, n_types=2, plot_events=20000):
 def plot_score_comparison(dtf_e_test, trained_models):
     """
     Plot the score of the model as a function of energy.
-    #TODO add a similar function that plots from saved scores instead of calculating every time.
 
     Parameters
     ----------
@@ -1943,11 +1945,12 @@ def plot_score_comparison(dtf_e_test, trained_models):
     fig, ax = plt.subplots(figsize=(8, 6))
 
     scores = defaultdict(dict)
-    energy_bins = extract_energy_bins_centers(trained_models[next(iter(trained_models))].keys())
 
     for this_model_name, trained_model in trained_models.items():
 
         print("Calculating scores for {}".format(this_model_name))
+
+        energy_bins = extract_energy_bins_centers(trained_model.keys())
 
         scores_this_model = list()
         for this_e_range, this_model in trained_model.items():
@@ -2041,7 +2044,7 @@ def plot_confusion_matrix(event_types, trained_model_name, n_types=3):
 
     # setStyle()
 
-    nrows = 5
+    nrows = np.ceil(len(event_types) / 4).astype(int) + 1
     ncols = 4
 
     fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=[14, 18])

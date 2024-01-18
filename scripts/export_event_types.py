@@ -43,7 +43,7 @@ if __name__ == "__main__":
 
     # Energy binning (in log10 TeV) used to separate event types. We use the binning usually used in
     # sensitivity curves, extended to lower and higher energies.
-    event_type_log_e_bins = np.arange(-1.7, 2.5, 0.2)
+    event_type_log_e_bins = event_types.sensitivity_log_e_bins
     # Camera offset binning (in degrees) used to separate event types. The binning is a test,
     # should be changed for better performance.
     n_offset_bins = 6

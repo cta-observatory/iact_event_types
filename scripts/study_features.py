@@ -7,7 +7,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         description=(
-            "Train event classes model with various training features."
+            "Train regressor models with various training features."
             "Results are saved in the models directory."
         )
     )
