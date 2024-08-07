@@ -104,14 +104,11 @@ if __name__ == "__main__":
         if plot_confusion_matrix:
 
             dtf_test = event_types.add_predict_column(dtf_e_test, trained_models)
-            # Get the energy binning from the trained model
-            e_ranges = list(trained_models[next(iter(trained_models))].keys())
-            # Sometimes they do not come in order... Here we fix that case.
-            e_ranges.sort()
-            log_e_reco_bins = np.log10(event_types.extract_energy_bins(e_ranges))
+
+            event_type_log_e_bins = event_types.sensitivity_log_e_bins
 
             event_types_lists = event_types.partition_event_types(
-                dtf_test, labels, log_e_reco_bins, n_types=n_types, type_bins=type_bins, save_true_types=True
+                dtf_test, labels, event_type_log_e_bins, n_types=n_types, type_bins=type_bins, save_true_types=True
             )
             for this_trained_model_name, this_event_types in event_types_lists.items():
                 plt = event_types.plot_confusion_matrix(

@@ -6,7 +6,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         description=(
-            "Train regressor models with various training sizes."
+            "Train regressor models with various energy binnings."
             "Results are saved in the models directory."
         )
     )
@@ -30,32 +30,27 @@ if __name__ == "__main__":
 
     dtf = dtf.dropna()
 
-    dtf_e = event_types.bin_data_in_energy(dtf, n_bins=20)
-
     labels, train_features = event_types.nominal_labels_train_features()
 
     all_models = event_types.define_regressors()
 
-    test_data_frac = dict()
-    test_data_frac["train_size_75p"] = 0.25
-    test_data_frac["train_size_50p"] = 0.50
-    test_data_frac["train_size_25p"] = 0.75
-    test_data_frac["train_size_15p"] = 0.85
-    test_data_frac["train_size_5p"] = 0.95
+    bin_numbers = [5, 10, 15, 20, 25]
 
-    for test_frac_name, test_frac in test_data_frac.items():
-        print("Training with {:.0%}".format(test_frac))
+    for bin_number in bin_numbers:
+        print(f"Training with {bin_number} bins")
+        name = f"{bin_number}_bins"
         models_to_train = dict()
-        models_to_train[test_frac_name] = dict()
-        models_to_train[test_frac_name]["train_features"] = train_features
-        models_to_train[test_frac_name]["labels"] = labels
-        models_to_train[test_frac_name]["model"] = all_models["linear_regression"]
-        models_to_train[test_frac_name]["test_data_suffix"] = test_frac_name
+        models_to_train[name] = dict()
+        models_to_train[name]["train_features"] = train_features
+        models_to_train[name]["labels"] = labels
+        models_to_train[name]["model"] = all_models["MLP_tanh"]
+        models_to_train[name]["test_data_suffix"] = name
 
+        dtf_e = event_types.bin_data_in_energy(dtf, n_bins=bin_number)
         dtf_e_train, dtf_e_test = event_types.split_data_train_test(
-            dtf_e, test_size=test_frac, random_state=777
+            dtf_e, test_size=0.75, random_state=777
         )
 
         trained_models = event_types.train_models(dtf_e_train, models_to_train)
         event_types.save_models(trained_models)
-        event_types.save_test_dtf(dtf_e_test, suffix=test_frac_name)
+        event_types.save_test_dtf(dtf_e_test, suffix=name)
