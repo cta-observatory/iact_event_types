@@ -32,6 +32,8 @@ if __name__ == "__main__":
     Path("plots/pearson").mkdir(parents=True, exist_ok=True)
 
     for this_e_range, this_dtf in dtf_e.items():
+        # Select the dtf for the first entry in the dictionary (there is only one entry for offset angle)
+        this_dtf = this_dic[list(this_dic.keys())[0]]
 
         e_range_name = this_e_range.replace(" < ", "-").replace(" ", "_")
 
